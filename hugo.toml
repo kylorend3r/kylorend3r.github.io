@@ -1,4 +1,60 @@
-baseURL = 'https://example.org/'
+baseURL = 'https://kylorend3r.github.io/'
 languageCode = 'en-us'
-title = 'My New Hugo Site'
+title = 'kylorend3r Blog'
 theme = 'PaperMod'
+
+[params]
+  env = 'production'
+  title = 'kylorend3r Blog'
+  description = 'A blog about databases, PostgreSQL, and software engineering'
+  keywords = ['blog', 'postgresql', 'database', 'software engineering']
+  author = 'kylorend3r'
+  images = ['/og-image.png']
+  
+  # Social Icons
+  [[params.socialIcons]]
+    name = 'github'
+    url = 'https://github.com/kylorend3r'
+  
+  # Theme options
+  ShowReadingTime = true
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowWordCount = true
+  ShowRssButtonInSectionTermList = true
+  UseHugoToc = true
+  disableSpecial1stPost = false
+  disableScrollToTop = false
+  comments = false
+  hidemeta = false
+  hideSummary = false
+  showtoc = true
+  tocopen = false
+
+[menu]
+  [[menu.main]]
+    identifier = 'home'
+    name = 'Home'
+    url = '/'
+    weight = 10
+  [[menu.main]]
+    identifier = 'posts'
+    name = 'Posts'
+    url = '/posts/'
+    weight = 20
+  [[menu.main]]
+    identifier = 'archives'
+    name = 'Archives'
+    url = '/archives/'
+    weight = 30
+  [[menu.main]]
+    identifier = 'search'
+    name = 'Search'
+    url = '/search/'
+    weight = 40
+  [[menu.main]]
+    identifier = 'tags'
+    name = 'Tags'
+    url = '/tags/'
+    weight = 50
