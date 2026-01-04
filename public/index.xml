@@ -1,19 +1,43 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>My New Hugo Site</title>
+    <title>kylorend3r Blog</title>
     <link>http://localhost:1313/</link>
-    <description>Recent content on My New Hugo Site</description>
+    <description>Recent content on kylorend3r Blog</description>
+    <image>
+      <title>kylorend3r Blog</title>
+      <url>http://localhost:1313/og-image.png</url>
+      <link>http://localhost:1313/og-image.png</link>
+    </image>
     <generator>Hugo -- 0.154.2</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 04 Jan 2026 14:24:56 +0100</lastBuildDate>
+    <lastBuildDate>Sun, 04 Jan 2026 00:00:00 +0000</lastBuildDate>
     <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Postgres Indexing Research</title>
-      <link>http://localhost:1313/posts/postgres-indexing-research/</link>
-      <pubDate>Sun, 04 Jan 2026 14:24:56 +0100</pubDate>
-      <guid>http://localhost:1313/posts/postgres-indexing-research/</guid>
-      <description></description>
+      <title>About</title>
+      <link>http://localhost:1313/about/</link>
+      <pubDate>Sun, 04 Jan 2026 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/about/</guid>
+      <description>&lt;h2 id=&#34;hi-im-kylorend3r-&#34;&gt;Hi, I&amp;rsquo;m kylorend3r 👋&lt;/h2&gt;
+&lt;p&gt;Welcome to my blog! I&amp;rsquo;m passionate about PostgreSQL and crafting solutions around it.&lt;/p&gt;
+&lt;h3 id=&#34;what-i-write-about&#34;&gt;What I Write About&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;PostgreSQL and database optimization&lt;/li&gt;
+&lt;li&gt;Technical deep-dives and tutorials&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;connect-with-me&#34;&gt;Connect With Me&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;GitHub&lt;/strong&gt;: &lt;a href=&#34;https://github.com/kylorend3r&#34;&gt;@kylorend3r&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Linkedin&lt;/strong&gt;: &lt;a href=&#34;https://www.linkedin.com/in/demirhuseyinnn/&#34;&gt;kylorend3r&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Feel free to reach out or connect!&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Sustainable Indexing in PostgreSQL and pg-reindexer</title>
+      <link>http://localhost:1313/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</link>
+      <pubDate>Thu, 27 Nov 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</guid>
+      <description>Exploring sustainable indexing strategies in PostgreSQL and the pg-reindexer tool</description>
     </item>
   </channel>
 </rss>

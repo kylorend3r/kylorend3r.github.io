@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>Posts on My New Hugo Site</title>
+    <title>Posts on kylorend3r Blog</title>
     <link>http://localhost:1313/posts/</link>
-    <description>Recent content in Posts on My New Hugo Site</description>
+    <description>Recent content in Posts on kylorend3r Blog</description>
+    <image>
+      <title>kylorend3r Blog</title>
+      <url>http://localhost:1313/og-image.png</url>
+      <link>http://localhost:1313/og-image.png</link>
+    </image>
     <generator>Hugo -- 0.154.2</generator>
     <language>en-us</language>
     <lastBuildDate>Sun, 04 Jan 2026 14:24:56 +0100</lastBuildDate>
@@ -13,7 +18,14 @@
       <link>http://localhost:1313/posts/postgres-indexing-research/</link>
       <pubDate>Sun, 04 Jan 2026 14:24:56 +0100</pubDate>
       <guid>http://localhost:1313/posts/postgres-indexing-research/</guid>
-      <description></description>
+      <description>Exploring PostgreSQL indexing strategies and best practices for optimal database performance</description>
+    </item>
+    <item>
+      <title>Sustainable Indexing in PostgreSQL and pg-reindexer</title>
+      <link>http://localhost:1313/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</link>
+      <pubDate>Thu, 27 Nov 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</guid>
+      <description>Exploring sustainable indexing strategies in PostgreSQL and the pg-reindexer tool</description>
     </item>
   </channel>
 </rss>
