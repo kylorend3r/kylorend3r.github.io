@@ -1,0 +1,62 @@
+{{- /* Footer custom content area start */ -}}
+<script>
+    // Year navigation active state and smooth scrolling
+    document.addEventListener('DOMContentLoaded', function() {
+        const yearNavItems = document.querySelectorAll('.year-nav-item');
+        const yearSections = document.querySelectorAll('.archive-year');
+        
+        // Update active year on scroll
+        function updateActiveYear() {
+            const scrollPosition = window.scrollY + 150; // Offset for header
+            
+            yearSections.forEach((section, index) => {
+                const sectionTop = section.offsetTop;
+                const sectionBottom = sectionTop + section.offsetHeight;
+                const yearId = section.querySelector('.archive-year-header')?.id;
+                
+                if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+                    // Remove active class from all items
+                    yearNavItems.forEach(item => item.classList.remove('active'));
+                    
+                    // Add active class to corresponding nav item
+                    if (yearId) {
+                        const navItem = document.querySelector(`.year-nav-item[href="#${yearId}"]`);
+                        if (navItem) {
+                            navItem.classList.add('active');
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Smooth scroll for year navigation links
+        yearNavItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                
+                if (targetElement) {
+                    const headerOffset = 100;
+                    const elementPosition = targetElement.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                    
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Update URL without triggering scroll
+                    history.pushState(null, null, targetId);
+                }
+            });
+        });
+        
+        // Update active year on scroll
+        window.addEventListener('scroll', updateActiveYear);
+        
+        // Set initial active year
+        updateActiveYear();
+    });
+</script>
+{{- /* Footer custom content area end */ -}}

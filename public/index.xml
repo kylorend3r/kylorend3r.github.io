@@ -2,22 +2,22 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>kylorend3r Blog</title>
-    <link>https://kylorend3r.github.io/</link>
+    <link>http://localhost:1313/</link>
     <description>Recent content on kylorend3r Blog</description>
     <image>
       <title>kylorend3r Blog</title>
-      <url>https://kylorend3r.github.io/og-image.png</url>
-      <link>https://kylorend3r.github.io/og-image.png</link>
+      <url>http://localhost:1313/og-image.png</url>
+      <link>http://localhost:1313/og-image.png</link>
     </image>
     <generator>Hugo -- 0.154.2</generator>
     <language>en-us</language>
     <lastBuildDate>Sun, 04 Jan 2026 00:00:00 +0000</lastBuildDate>
-    <atom:link href="https://kylorend3r.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>About</title>
-      <link>https://kylorend3r.github.io/about/</link>
+      <link>http://localhost:1313/about/</link>
       <pubDate>Sun, 04 Jan 2026 00:00:00 +0000</pubDate>
-      <guid>https://kylorend3r.github.io/about/</guid>
+      <guid>http://localhost:1313/about/</guid>
       <description>&lt;h2 id=&#34;hi-im-kylorend3r-&#34;&gt;Hi, I&amp;rsquo;m kylorend3r 👋&lt;/h2&gt;
 &lt;p&gt;Welcome to my blog! I&amp;rsquo;m passionate about PostgreSQL and crafting solutions around it.&lt;/p&gt;
 &lt;h3 id=&#34;what-i-write-about&#34;&gt;What I Write About&lt;/h3&gt;
@@ -34,59 +34,73 @@
     </item>
     <item>
       <title>Sustainable Indexing in PostgreSQL and pg-reindexer</title>
-      <link>https://kylorend3r.github.io/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</link>
+      <link>http://localhost:1313/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</link>
       <pubDate>Thu, 27 Nov 2025 00:00:00 +0000</pubDate>
-      <guid>https://kylorend3r.github.io/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</guid>
+      <guid>http://localhost:1313/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</guid>
       <description>Exploring sustainable indexing strategies in PostgreSQL and the pg-reindexer tool</description>
     </item>
     <item>
       <title>The Role of TCP Keepalives in PostgreSQL for a More Reliable Connection Experience</title>
-      <link>https://kylorend3r.github.io/posts/the-role-of-tcp/</link>
+      <link>http://localhost:1313/posts/the-role-of-tcp/</link>
       <pubDate>Wed, 05 Mar 2025 00:00:00 +0000</pubDate>
-      <guid>https://kylorend3r.github.io/posts/the-role-of-tcp/</guid>
+      <guid>http://localhost:1313/posts/the-role-of-tcp/</guid>
       <description>Exploring how TCP keepalives help manage idle connections and detect network failures in PostgreSQL</description>
     </item>
     <item>
       <title>Simple Timeouts have a Powerful Impact in Taming Idle in Transaction Exhaustion in PostgreSQL</title>
-      <link>https://kylorend3r.github.io/posts/simple-timeouts-idle-in-transaction-exhaustion-postgresql/</link>
+      <link>http://localhost:1313/posts/simple-timeouts-idle-in-transaction-exhaustion-postgresql/</link>
       <pubDate>Sat, 25 Jan 2025 00:00:00 +0000</pubDate>
-      <guid>https://kylorend3r.github.io/posts/simple-timeouts-idle-in-transaction-exhaustion-postgresql/</guid>
+      <guid>http://localhost:1313/posts/simple-timeouts-idle-in-transaction-exhaustion-postgresql/</guid>
       <description>Exploring how timeout settings can effectively manage idle-in-transaction connections and prevent resource exhaustion in PostgreSQL</description>
     </item>
     <item>
       <title>Memory Matters in PostgreSQL : Configuring max_connections and work_mem Effectively</title>
-      <link>https://kylorend3r.github.io/posts/memory-matters-postgresql-configuring-max-connections-work-mem-effectively/</link>
+      <link>http://localhost:1313/posts/memory-matters-postgresql-configuring-max-connections-work-mem-effectively/</link>
       <pubDate>Sat, 09 Nov 2024 00:00:00 +0000</pubDate>
-      <guid>https://kylorend3r.github.io/posts/memory-matters-postgresql-configuring-max-connections-work-mem-effectively/</guid>
+      <guid>http://localhost:1313/posts/memory-matters-postgresql-configuring-max-connections-work-mem-effectively/</guid>
       <description>Exploring the relationship between work_mem and max_connections parameters in PostgreSQL and how to configure them effectively for optimal memory usage and performance</description>
     </item>
     <item>
       <title>PostgreSQL Configuration Chronicles: Memory Related Configurations</title>
-      <link>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-memory-related-configurations/</link>
+      <link>http://localhost:1313/posts/postgresql-configuration-chronicles-memory-related-configurations/</link>
       <pubDate>Wed, 24 Apr 2024 00:00:00 +0000</pubDate>
-      <guid>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-memory-related-configurations/</guid>
+      <guid>http://localhost:1313/posts/postgresql-configuration-chronicles-memory-related-configurations/</guid>
       <description>Exploring PostgreSQL memory-related parameters and their impact on system performance, with practical benchmarking and configuration guidance</description>
     </item>
     <item>
       <title>PostgreSQL Configuration Chronicles: Updates and Fillfactor for Optimal Database Performance</title>
-      <link>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-updates-fillfactor-optimal-database-performance/</link>
+      <link>http://localhost:1313/posts/postgresql-configuration-chronicles-updates-fillfactor-optimal-database-performance/</link>
       <pubDate>Mon, 22 Apr 2024 00:00:00 +0000</pubDate>
-      <guid>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-updates-fillfactor-optimal-database-performance/</guid>
+      <guid>http://localhost:1313/posts/postgresql-configuration-chronicles-updates-fillfactor-optimal-database-performance/</guid>
       <description>Exploring fillfactor and table configuration options in PostgreSQL to optimize update performance and streamline database operations</description>
     </item>
     <item>
       <title>PostgreSQL Configuration Chronicles: Optimizing Timeout Settings for Performance Excellence</title>
-      <link>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-optimizing-timeout-settings-performance-excellence/</link>
+      <link>http://localhost:1313/posts/postgresql-configuration-chronicles-optimizing-timeout-settings-performance-excellence/</link>
       <pubDate>Tue, 09 Apr 2024 00:00:00 +0000</pubDate>
-      <guid>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-optimizing-timeout-settings-performance-excellence/</guid>
+      <guid>http://localhost:1313/posts/postgresql-configuration-chronicles-optimizing-timeout-settings-performance-excellence/</guid>
       <description>Exploring PostgreSQL timeout settings including statement_timeout and lock_timeout, and how to configure them for optimal database performance and reliability</description>
     </item>
     <item>
       <title>Optimizing PostgreSQL Tables: Exploring Vacuuming Strategies to Combat Bloat</title>
-      <link>https://kylorend3r.github.io/posts/optimizing-postgresql-tables-exploring-vacuuming-strategies-combat-bloat/</link>
+      <link>http://localhost:1313/posts/optimizing-postgresql-tables-exploring-vacuuming-strategies-combat-bloat/</link>
       <pubDate>Mon, 08 Apr 2024 00:00:00 +0000</pubDate>
-      <guid>https://kylorend3r.github.io/posts/optimizing-postgresql-tables-exploring-vacuuming-strategies-combat-bloat/</guid>
+      <guid>http://localhost:1313/posts/optimizing-postgresql-tables-exploring-vacuuming-strategies-combat-bloat/</guid>
       <description>Understanding PostgreSQL bloat, its impact on performance, and exploring vacuuming strategies including VACUUM FULL and pg_repack to combat table and index bloat</description>
+    </item>
+    <item>
+      <title>PostgreSQL Configuration Chronicles: Managing Checkpoint Settings for Enhanced Performance</title>
+      <link>http://localhost:1313/posts/postgresql-configuration-chronicles-managing-checkpoint-settings-enhanced-performance/</link>
+      <pubDate>Mon, 01 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/postgresql-configuration-chronicles-managing-checkpoint-settings-enhanced-performance/</guid>
+      <description>Exploring PostgreSQL checkpoint mechanism, key parameters, and strategies for optimizing checkpoint configuration to enhance database performance</description>
+    </item>
+    <item>
+      <title>PostgreSQL Configuration Chronicles: Adjusting commit_delay and wal_writer_delay</title>
+      <link>http://localhost:1313/posts/postgresql-configuration-chronicles-adjusting-commit-delay-wal-writer-delay/</link>
+      <pubDate>Sun, 24 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/postgresql-configuration-chronicles-adjusting-commit-delay-wal-writer-delay/</guid>
+      <description>Exploring how to optimize PostgreSQL performance by adjusting commit_delay and wal_writer_delay parameters to improve system responsiveness and WAL efficiency</description>
     </item>
   </channel>
 </rss>

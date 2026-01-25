@@ -47,6 +47,37 @@
   {{- partial "home_info.html" . }}
   {{- end }}
 
+  {{/* Compact Post Summary List Section - Last 10 Posts */}}
+  <section class="compact-post-summary">
+    <h2 class="compact-summary-header">Recent Posts</h2>
+    <div class="compact-summary-list">
+      {{- range (first 10 ($pages.ByPublishDate.Reverse)) }}
+      <a href="{{ .Permalink }}" class="compact-summary-item">
+        <span class="compact-summary-title">{{ .Title }}</span>
+        <span class="compact-summary-date">{{ .PublishDate.Format "Jan 2, 2006" }}</span>
+      </a>
+      {{- end }}
+    </div>
+  </section>
+
+  {{/* Year Navigation Section */}}
+  <section class="year-navigation-section">
+    <h2 class="year-nav-section-header">Browse by Year</h2>
+    <nav class="year-nav-list">
+      {{- range $pages.GroupByPublishDate "2006" }}
+      {{- if ne .Key "0001" }}
+      {{- $year := replace .Key "0001" "" }}
+      <a href="#{{ $year }}" class="year-nav-item">
+        <span class="year-nav-year">{{ $year }}</span>
+        <span class="year-nav-count">({{ len .Pages }})</span>
+      </a>
+      {{- end }}
+      {{- end }}
+    </nav>
+  </section>
+
+  {{/* Date-grouped posts */}}
+  <div class="posts-by-date">
   {{- range $pages.GroupByPublishDate "2006" }}
   {{- if ne .Key "0001" }}
   <div class="archive-year">
@@ -55,7 +86,7 @@
       <a class="archive-header-link" href="#{{ $year }}">
         {{- $year -}}
       </a>
-      <sup class="archive-count">&nbsp;{{ len .Pages }}</sup>
+      <sup class="archive-count">({{ len .Pages }} {{ if eq (len .Pages) 1 }}post{{ else }}posts{{ end }})</sup>
     </h2>
     {{- range .Pages.GroupByDate "January" }}
     <div class="archive-month">
@@ -63,7 +94,7 @@
         <a class="archive-header-link" href="#{{ $year }}-{{ .Key }}">
           {{- .Key -}}
         </a>
-        <sup class="archive-count">&nbsp;{{ len .Pages }}</sup>
+        <sup class="archive-count">({{ len .Pages }})</sup>
       </h3>
       <div class="archive-posts">
         {{- range $index, $page := .Pages }}
@@ -104,9 +135,8 @@
       </div>
     </div>
     {{- end }}
-  </div>
-  {{- end }}
-  {{- end }}
+    {{- end }}
+    </div>
 
 {{- else }}
   {{/* Non-home pages: Standard list view */}}
@@ -177,6 +207,8 @@
     </nav>
   </footer>
   {{- end }}
+
+{{- end }}{{/* end else (non-home pages) */}}
 
 {{- end }}{{/* end if .IsHome */}}
 

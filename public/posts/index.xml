@@ -69,5 +69,19 @@
       <guid>https://kylorend3r.github.io/posts/optimizing-postgresql-tables-exploring-vacuuming-strategies-combat-bloat/</guid>
       <description>Understanding PostgreSQL bloat, its impact on performance, and exploring vacuuming strategies including VACUUM FULL and pg_repack to combat table and index bloat</description>
     </item>
+    <item>
+      <title>PostgreSQL Configuration Chronicles: Managing Checkpoint Settings for Enhanced Performance</title>
+      <link>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-managing-checkpoint-settings-enhanced-performance/</link>
+      <pubDate>Mon, 01 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-managing-checkpoint-settings-enhanced-performance/</guid>
+      <description>Exploring PostgreSQL checkpoint mechanism, key parameters, and strategies for optimizing checkpoint configuration to enhance database performance</description>
+    </item>
+    <item>
+      <title>PostgreSQL Configuration Chronicles: Adjusting commit_delay and wal_writer_delay</title>
+      <link>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-adjusting-commit-delay-wal-writer-delay/</link>
+      <pubDate>Sun, 24 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-adjusting-commit-delay-wal-writer-delay/</guid>
+      <description>Exploring how to optimize PostgreSQL performance by adjusting commit_delay and wal_writer_delay parameters to improve system responsiveness and WAL efficiency</description>
+    </item>
   </channel>
 </rss>
