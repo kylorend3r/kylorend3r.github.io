@@ -15,7 +15,7 @@ Copy the content from Medium and paste it below, converting to Markdown format a
 -->
 
 
-## The Definition and Introduction
+## Introduction
 
 Hi all, in this blogpost my goal is to reveal some obvious and known facts about using btree indexes in PostgreSQL.
 
@@ -29,20 +29,22 @@ I’ll start with the question of why sustainable indexing matters in PostgreSQL
 
 In the second part of this blogpost, I’ll try to introduce some well-known proactive approaches to maximize the sustainable indexing experience in PostgreSQL.
 
-The agenda as follow
+## Table of Contents
 
-* Over-Indexed Tables and Sustainability
-* Cost of Bloated B-Tree Indexes
-* Cost of Page Splitting in B-Tree Indexes
-* Cost of Updating Indexed Columns
-* Unexpected Latencies Due to Heap Fetches in Secondary Instance (Index Scan during Recovery)
-* Routine Reindexing (Concurrently)
-* Automating Sustainable Index Maintenance with pg-reindexer
-* Removing Redundant and Duplicate Indexes
-* Partial Indexing and Reducing the Footprint of Indexes
+* [Over-Indexed Tables and Sustainability](#over-indexed-tables-and-sustainability)
+* [Cost of Bloated B-Tree Indexes](#cost-of-bloated-b-tree-indexes)
+* [Cost of Page Splitting in B-Tree Indexes](#cost-of-page-splitting-in-b-tree-indexes)
+* [Cost of Updating Indexed Columns](#cost-of-updating-indexed-columns)
+* [Unexpected Latencies Due to Heap Fetches in Secondary Instance](#unexpected-latencies-due-to-heap-fetches-in-secondary-instance)
+* [Proactive Approaches to Maximize Sustainability](#proactive-approaches-to-maximize-sustainability)
+  * [Routine Reindexing (Concurrently)](#routine-reindexing-concurrently)
+  * [Automating Sustainable Index Maintenance with pg-reindexer](#automating-sustainable-index-maintenance-with-pg-reindexer)
+  * [Removing Redundant and Duplicate Indexes](#removing-redundant-and-duplicate-indexes)
+  * [Partial Indexing and Reducing the Footprint of Indexes](#partial-indexing-and-reducing-the-footprint-of-indexes)
+* [Conclusion](#conclusion)
 
 
-## Over Indexed Tables and Sustainability
+## Over-Indexed Tables and Sustainability
 
 From my point of view sometimes we end up with over-indexed tables. What are the downsides of the over-indexed tables in our database ?
 
@@ -349,7 +351,7 @@ In addition to this, in documentation inside the nbtree module it clearly explai
 
 > An insertion that causes a page split is logged as a single WAL entry for the changes occurring on the insertion’s level — including update of the right sibling’s left-link — followed by a second WAL entry for the insertion on the parent level (which might itself be a page split, requiring an additional insertion above that, etc).
 
-**TL;DR: High latency from over-indexing is caused by B-tree page splitting. A split requires two separate atomic WAL writes and two phases of page locking, which adds significant overhead. You can reduce the frequency of splits by lowering the fillfactor, but this increases the index's total disk sizeUpdating Indexed Columns and Sustainability**
+**TL;DR: High latency from over-indexing is caused by B-tree page splitting. A split requires two separate atomic WAL writes and two phases of page locking, which adds significant overhead. You can reduce the frequency of splits by lowering the fillfactor, but this increases the index's total disk size.**
 
 ## Cost of Updating Indexed Columns
 
@@ -462,7 +464,7 @@ After the benchmark there are basic take aways.
 
 **TL;DR: Updating a column that has an index is significantly slower than updating a non-indexed column because PostgreSQL must perform additional overhead to maintain (delete and insert new entries in) the index. To maintain performance, only index columns that are immutable or change infrequently**
 
-## Unexpected Latencies Due to Heap Fetches in Secondary Instance (Index Scan during Recovery)
+## Unexpected Latencies Due to Heap Fetches in Secondary Instance
 
 Another aspect of sustainable indexing is to consider index scans on secondary instances scanning more pages and visiting more frequently the heap. This situation can cause additional latency unexpectedly.
 
@@ -481,7 +483,7 @@ We’ve examined the key preventative actions and the pitfalls that lead to inef
 
 We already covered strategies and precautions to avoid from inefficient indexes in PostgreSQL but we can also focus on improving our existing indexes.
 
-In PostgreSQL, we can rely on some maintenance operations on indexes to ensure maximum efficiency. The remainin part of this post will contain basic maintenance ideas/operations covering btree indexes.
+In PostgreSQL, we can rely on some maintenance operations on indexes to ensure maximum efficiency. The remaining part of this post will contain basic maintenance ideas/operations covering btree indexes.
 
 ### Routine Reindexing (Concurrently)
 
