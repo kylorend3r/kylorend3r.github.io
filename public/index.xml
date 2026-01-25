@@ -2,22 +2,22 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>kylorend3r Blog</title>
-    <link>http://localhost:1313/</link>
+    <link>https://kylorend3r.github.io/</link>
     <description>Recent content on kylorend3r Blog</description>
     <image>
       <title>kylorend3r Blog</title>
-      <url>http://localhost:1313/og-image.png</url>
-      <link>http://localhost:1313/og-image.png</link>
+      <url>https://kylorend3r.github.io/og-image.png</url>
+      <link>https://kylorend3r.github.io/og-image.png</link>
     </image>
     <generator>Hugo -- 0.154.2</generator>
     <language>en-us</language>
     <lastBuildDate>Sun, 04 Jan 2026 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://kylorend3r.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>About</title>
-      <link>http://localhost:1313/about/</link>
+      <link>https://kylorend3r.github.io/about/</link>
       <pubDate>Sun, 04 Jan 2026 00:00:00 +0000</pubDate>
-      <guid>http://localhost:1313/about/</guid>
+      <guid>https://kylorend3r.github.io/about/</guid>
       <description>&lt;h2 id=&#34;hi-im-kylorend3r-&#34;&gt;Hi, I&amp;rsquo;m kylorend3r 👋&lt;/h2&gt;
 &lt;p&gt;Welcome to my blog! I&amp;rsquo;m passionate about PostgreSQL and crafting solutions around it.&lt;/p&gt;
 &lt;h3 id=&#34;what-i-write-about&#34;&gt;What I Write About&lt;/h3&gt;
@@ -34,10 +34,24 @@
     </item>
     <item>
       <title>Sustainable Indexing in PostgreSQL and pg-reindexer</title>
-      <link>http://localhost:1313/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</link>
+      <link>https://kylorend3r.github.io/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</link>
       <pubDate>Thu, 27 Nov 2025 00:00:00 +0000</pubDate>
-      <guid>http://localhost:1313/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</guid>
+      <guid>https://kylorend3r.github.io/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</guid>
       <description>Exploring sustainable indexing strategies in PostgreSQL and the pg-reindexer tool</description>
+    </item>
+    <item>
+      <title>The Role of TCP Keepalives in PostgreSQL for a More Reliable Connection Experience</title>
+      <link>https://kylorend3r.github.io/posts/the-role-of-tcp/</link>
+      <pubDate>Wed, 05 Mar 2025 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/posts/the-role-of-tcp/</guid>
+      <description>Exploring how TCP keepalives help manage idle connections and detect network failures in PostgreSQL</description>
+    </item>
+    <item>
+      <title>Simple Timeouts have a Powerful Impact in Taming Idle in Transaction Exhaustion in PostgreSQL</title>
+      <link>https://kylorend3r.github.io/posts/simple-timeouts-idle-in-transaction-exhaustion-postgresql/</link>
+      <pubDate>Sat, 25 Jan 2025 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/posts/simple-timeouts-idle-in-transaction-exhaustion-postgresql/</guid>
+      <description>Exploring how timeout settings can effectively manage idle-in-transaction connections and prevent resource exhaustion in PostgreSQL</description>
     </item>
   </channel>
 </rss>

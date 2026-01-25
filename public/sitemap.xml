@@ -2,39 +2,60 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:1313/tags/database/</loc>
-    <lastmod>2026-01-04T14:24:56+01:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/tags/indexing/</loc>
-    <lastmod>2026-01-04T14:24:56+01:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/</loc>
-    <lastmod>2026-01-04T14:24:56+01:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/tags/performance/</loc>
-    <lastmod>2026-01-04T14:24:56+01:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/posts/postgres-indexing-research/</loc>
-    <lastmod>2026-01-04T14:24:56+01:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/tags/postgresql/</loc>
-    <lastmod>2026-01-04T14:24:56+01:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/posts/</loc>
-    <lastmod>2026-01-04T14:24:56+01:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/tags/</loc>
-    <lastmod>2026-01-04T14:24:56+01:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/about/</loc>
+    <loc>https://kylorend3r.github.io/about/</loc>
     <lastmod>2026-01-04T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/pg-reindexer/</loc>
+    <loc>https://kylorend3r.github.io/</loc>
+    <lastmod>2026-01-04T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/database/</loc>
     <lastmod>2025-11-27T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</loc>
+    <loc>https://kylorend3r.github.io/tags/indexing/</loc>
     <lastmod>2025-11-27T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/categories/</loc>
+    <loc>https://kylorend3r.github.io/tags/performance/</loc>
+    <lastmod>2025-11-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/pg-reindexer/</loc>
+    <lastmod>2025-11-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/postgresql/</loc>
+    <lastmod>2025-11-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/posts/</loc>
+    <lastmod>2025-11-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/</loc>
+    <lastmod>2025-11-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/</loc>
+    <lastmod>2025-11-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/connections/</loc>
+    <lastmod>2025-03-05T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/networking/</loc>
+    <lastmod>2025-03-05T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/reliability/</loc>
+    <lastmod>2025-03-05T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/tcp/</loc>
+    <lastmod>2025-03-05T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/posts/the-role-of-tcp/</loc>
+    <lastmod>2025-03-05T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/configuration/</loc>
+    <lastmod>2025-01-25T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/posts/simple-timeouts-idle-in-transaction-exhaustion-postgresql/</loc>
+    <lastmod>2025-01-25T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/timeouts/</loc>
+    <lastmod>2025-01-25T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/categories/</loc>
   </url>
 </urlset>
