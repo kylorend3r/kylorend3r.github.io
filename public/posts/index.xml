@@ -34,5 +34,40 @@
       <guid>https://kylorend3r.github.io/posts/simple-timeouts-idle-in-transaction-exhaustion-postgresql/</guid>
       <description>Exploring how timeout settings can effectively manage idle-in-transaction connections and prevent resource exhaustion in PostgreSQL</description>
     </item>
+    <item>
+      <title>Memory Matters in PostgreSQL : Configuring max_connections and work_mem Effectively</title>
+      <link>https://kylorend3r.github.io/posts/memory-matters-postgresql-configuring-max-connections-work-mem-effectively/</link>
+      <pubDate>Sat, 09 Nov 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/posts/memory-matters-postgresql-configuring-max-connections-work-mem-effectively/</guid>
+      <description>Exploring the relationship between work_mem and max_connections parameters in PostgreSQL and how to configure them effectively for optimal memory usage and performance</description>
+    </item>
+    <item>
+      <title>PostgreSQL Configuration Chronicles: Memory Related Configurations</title>
+      <link>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-memory-related-configurations/</link>
+      <pubDate>Wed, 24 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-memory-related-configurations/</guid>
+      <description>Exploring PostgreSQL memory-related parameters and their impact on system performance, with practical benchmarking and configuration guidance</description>
+    </item>
+    <item>
+      <title>PostgreSQL Configuration Chronicles: Updates and Fillfactor for Optimal Database Performance</title>
+      <link>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-updates-fillfactor-optimal-database-performance/</link>
+      <pubDate>Mon, 22 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-updates-fillfactor-optimal-database-performance/</guid>
+      <description>Exploring fillfactor and table configuration options in PostgreSQL to optimize update performance and streamline database operations</description>
+    </item>
+    <item>
+      <title>PostgreSQL Configuration Chronicles: Optimizing Timeout Settings for Performance Excellence</title>
+      <link>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-optimizing-timeout-settings-performance-excellence/</link>
+      <pubDate>Tue, 09 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-optimizing-timeout-settings-performance-excellence/</guid>
+      <description>Exploring PostgreSQL timeout settings including statement_timeout and lock_timeout, and how to configure them for optimal database performance and reliability</description>
+    </item>
+    <item>
+      <title>Optimizing PostgreSQL Tables: Exploring Vacuuming Strategies to Combat Bloat</title>
+      <link>https://kylorend3r.github.io/posts/optimizing-postgresql-tables-exploring-vacuuming-strategies-combat-bloat/</link>
+      <pubDate>Mon, 08 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/posts/optimizing-postgresql-tables-exploring-vacuuming-strategies-combat-bloat/</guid>
+      <description>Understanding PostgreSQL bloat, its impact on performance, and exploring vacuuming strategies including VACUUM FULL and pg_repack to combat table and index bloat</description>
+    </item>
   </channel>
 </rss>

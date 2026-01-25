@@ -90,5 +90,103 @@
       <guid>https://kylorend3r.github.io/tags/timeouts/</guid>
       <description></description>
     </item>
+    <item>
+      <title>Max_connections</title>
+      <link>https://kylorend3r.github.io/tags/max_connections/</link>
+      <pubDate>Sat, 09 Nov 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/max_connections/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Memory</title>
+      <link>https://kylorend3r.github.io/tags/memory/</link>
+      <pubDate>Sat, 09 Nov 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/memory/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Work_mem</title>
+      <link>https://kylorend3r.github.io/tags/work_mem/</link>
+      <pubDate>Sat, 09 Nov 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/work_mem/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Shared_buffers</title>
+      <link>https://kylorend3r.github.io/tags/shared_buffers/</link>
+      <pubDate>Wed, 24 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/shared_buffers/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Fillfactor</title>
+      <link>https://kylorend3r.github.io/tags/fillfactor/</link>
+      <pubDate>Mon, 22 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/fillfactor/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Optimization</title>
+      <link>https://kylorend3r.github.io/tags/optimization/</link>
+      <pubDate>Mon, 22 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/optimization/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Updates</title>
+      <link>https://kylorend3r.github.io/tags/updates/</link>
+      <pubDate>Mon, 22 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/updates/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Lock_timeout</title>
+      <link>https://kylorend3r.github.io/tags/lock_timeout/</link>
+      <pubDate>Tue, 09 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/lock_timeout/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Statement_timeout</title>
+      <link>https://kylorend3r.github.io/tags/statement_timeout/</link>
+      <pubDate>Tue, 09 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/statement_timeout/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Timeout</title>
+      <link>https://kylorend3r.github.io/tags/timeout/</link>
+      <pubDate>Tue, 09 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/timeout/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Bloat</title>
+      <link>https://kylorend3r.github.io/tags/bloat/</link>
+      <pubDate>Mon, 08 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/bloat/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Maintenance</title>
+      <link>https://kylorend3r.github.io/tags/maintenance/</link>
+      <pubDate>Mon, 08 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/maintenance/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Pg_repack</title>
+      <link>https://kylorend3r.github.io/tags/pg_repack/</link>
+      <pubDate>Mon, 08 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/pg_repack/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Vacuum</title>
+      <link>https://kylorend3r.github.io/tags/vacuum/</link>
+      <pubDate>Mon, 08 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://kylorend3r.github.io/tags/vacuum/</guid>
+      <description></description>
+    </item>
   </channel>
 </rss>

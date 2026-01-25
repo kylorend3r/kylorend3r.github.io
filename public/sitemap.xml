@@ -56,6 +56,63 @@
     <loc>https://kylorend3r.github.io/tags/timeouts/</loc>
     <lastmod>2025-01-25T00:00:00+00:00</lastmod>
   </url><url>
+    <loc>https://kylorend3r.github.io/tags/max_connections/</loc>
+    <lastmod>2024-11-09T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/memory/</loc>
+    <lastmod>2024-11-09T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/posts/memory-matters-postgresql-configuring-max-connections-work-mem-effectively/</loc>
+    <lastmod>2024-11-09T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/work_mem/</loc>
+    <lastmod>2024-11-09T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-memory-related-configurations/</loc>
+    <lastmod>2024-04-24T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/shared_buffers/</loc>
+    <lastmod>2024-04-24T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/fillfactor/</loc>
+    <lastmod>2024-04-22T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/optimization/</loc>
+    <lastmod>2024-04-22T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-updates-fillfactor-optimal-database-performance/</loc>
+    <lastmod>2024-04-22T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/updates/</loc>
+    <lastmod>2024-04-22T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/lock_timeout/</loc>
+    <lastmod>2024-04-09T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-optimizing-timeout-settings-performance-excellence/</loc>
+    <lastmod>2024-04-09T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/statement_timeout/</loc>
+    <lastmod>2024-04-09T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/timeout/</loc>
+    <lastmod>2024-04-09T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/bloat/</loc>
+    <lastmod>2024-04-08T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/maintenance/</loc>
+    <lastmod>2024-04-08T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/posts/optimizing-postgresql-tables-exploring-vacuuming-strategies-combat-bloat/</loc>
+    <lastmod>2024-04-08T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/pg_repack/</loc>
+    <lastmod>2024-04-08T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://kylorend3r.github.io/tags/vacuum/</loc>
+    <lastmod>2024-04-08T00:00:00+00:00</lastmod>
+  </url><url>
     <loc>https://kylorend3r.github.io/categories/</loc>
   </url>
 </urlset>

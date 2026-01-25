@@ -147,49 +147,118 @@
     Posts
   </h1>
 </header>
+  
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Sustainable Indexing in PostgreSQL and pg-reindexer
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction Hi all, in this blogpost my goal is to reveal some obvious and known facts about using btree indexes in PostgreSQL.
+  <article class="post-entry"> 
+    <header class="entry-header">
+      <h2 class="entry-hint-parent">Sustainable Indexing in PostgreSQL and pg-reindexer
+      </h2>
+    </header>
+    <div class="entry-content">
+      <p>Introduction Hi all, in this blogpost my goal is to reveal some obvious and known facts about using btree indexes in PostgreSQL.
 In database world we almost all rely on btree indexes to improve range scan read performance. In other words, to improve query performance in OLTP databases. But using indexes is not free always and we as DBAs or software developers have to pay for it. I’ll try to discuss how can we achieve a sustainable indexing in PostgreSQL.
 ...</p>
-  </div>
-  <footer class="entry-footer"><span title='2025-11-27 00:00:00 +0000 UTC'>November 27, 2025</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
-  <a class="entry-link" aria-label="post link to Sustainable Indexing in PostgreSQL and pg-reindexer" href="https://kylorend3r.github.io/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/"></a>
-</article>
+    </div>
+    <footer class="entry-footer"><span title='2025-11-27 00:00:00 +0000 UTC'>November 27, 2025</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
+    <a class="entry-link" aria-label="post link to Sustainable Indexing in PostgreSQL and pg-reindexer" href="https://kylorend3r.github.io/posts/sustainable-indexing-in-postgresql-and-pg-reindexer/"></a>
+  </article>
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">The Role of TCP Keepalives in PostgreSQL for a More Reliable Connection Experience
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction Have you ever thought about PostgreSQL connections — specifically, idle ones? If so, this blog post will offer a new perspective on how you manage them. I’ll be focusing on idle connections in the context of network failures, with the goal of helping you build a more robust and reliable PostgreSQL environment.
+  <article class="post-entry"> 
+    <header class="entry-header">
+      <h2 class="entry-hint-parent">The Role of TCP Keepalives in PostgreSQL for a More Reliable Connection Experience
+      </h2>
+    </header>
+    <div class="entry-content">
+      <p>Introduction Have you ever thought about PostgreSQL connections — specifically, idle ones? If so, this blog post will offer a new perspective on how you manage them. I’ll be focusing on idle connections in the context of network failures, with the goal of helping you build a more robust and reliable PostgreSQL environment.
 In the PostgreSQL world, we often concentrate on queries, indexes, and configuration tuning — but effective connection management is just as crucial. In particular, handling “zombie” connections (which we’ll define shortly) can lead to more efficient resource usage and a more stable database platform.
 ...</p>
-  </div>
-  <footer class="entry-footer"><span title='2025-03-05 00:00:00 +0000 UTC'>March 5, 2025</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
-  <a class="entry-link" aria-label="post link to The Role of TCP Keepalives in PostgreSQL for a More Reliable Connection Experience" href="https://kylorend3r.github.io/posts/the-role-of-tcp/"></a>
-</article>
+    </div>
+    <footer class="entry-footer"><span title='2025-03-05 00:00:00 +0000 UTC'>March 5, 2025</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
+    <a class="entry-link" aria-label="post link to The Role of TCP Keepalives in PostgreSQL for a More Reliable Connection Experience" href="https://kylorend3r.github.io/posts/the-role-of-tcp/"></a>
+  </article>
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Simple Timeouts have a Powerful Impact in Taming Idle in Transaction Exhaustion in PostgreSQL
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction Previously I discussed idle connections which are in zombie state. In other words, we discussed how to maintain connections which are idle and dead in the network layer. Visit the following blogpost to find out the idea and the history behind this post.
+  <article class="post-entry"> 
+    <header class="entry-header">
+      <h2 class="entry-hint-parent">Simple Timeouts have a Powerful Impact in Taming Idle in Transaction Exhaustion in PostgreSQL
+      </h2>
+    </header>
+    <div class="entry-content">
+      <p>Introduction Previously I discussed idle connections which are in zombie state. In other words, we discussed how to maintain connections which are idle and dead in the network layer. Visit the following blogpost to find out the idea and the history behind this post.
 Zombie Connections in PostgreSQL and TCP Keepalives
 I wanted to write a follow-up blogpost to cover remaining timeout GUCs on PostgreSQL to manage client connections more efficiently. In other words, I wanted to highlight and provide use-case examples about a couple of timeout GUCs on PostgreSQL which can help us to improve database reliability. Keep in mid that, the GUCs I’m going to discuss will be used many different ways but my main purpose is to highlight their importance and provide follow-up examples.
 ...</p>
-  </div>
-  <footer class="entry-footer"><span title='2025-01-25 00:00:00 +0000 UTC'>January 25, 2025</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
-  <a class="entry-link" aria-label="post link to Simple Timeouts have a Powerful Impact in Taming Idle in Transaction Exhaustion in PostgreSQL" href="https://kylorend3r.github.io/posts/simple-timeouts-idle-in-transaction-exhaustion-postgresql/"></a>
-</article>
+    </div>
+    <footer class="entry-footer"><span title='2025-01-25 00:00:00 +0000 UTC'>January 25, 2025</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
+    <a class="entry-link" aria-label="post link to Simple Timeouts have a Powerful Impact in Taming Idle in Transaction Exhaustion in PostgreSQL" href="https://kylorend3r.github.io/posts/simple-timeouts-idle-in-transaction-exhaustion-postgresql/"></a>
+  </article>
+
+  <article class="post-entry"> 
+    <header class="entry-header">
+      <h2 class="entry-hint-parent">Memory Matters in PostgreSQL : Configuring max_connections and work_mem Effectively
+      </h2>
+    </header>
+    <div class="entry-content">
+      <p>Introduction Hello everyone! In this blog post, I’ll discuss the relationship between the work_mem (and maintenance_work_mem) and max_connections parameters in PostgreSQL. These two settings play a key role in determining memory usage and overall performance, making them central to any tuning efforts aimed at future performance goals. While PostgreSQL includes other memory-related parameters, this post will focus specifically on how work_mem and max_connections interact and impact system performance.
+Table of Contents Definition of Parameters The Relationship Between Two Parameters Configuring Max Connections and Work Mem Parameters in PostgreSQL Benchmarks and Results Conclusion Definition of Parameters The definitions are stated at official PostgreSQL documentation page. Basically work_mem sets the base maximum amount of memory to be used by a query operation (such as a sort or hash table) before writing to temporary disk files. If this value is specified without units, it is taken as kilobytes.
+...</p>
+    </div>
+    <footer class="entry-footer"><span title='2024-11-09 00:00:00 +0000 UTC'>November 9, 2024</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
+    <a class="entry-link" aria-label="post link to Memory Matters in PostgreSQL : Configuring max_connections and work_mem Effectively" href="https://kylorend3r.github.io/posts/memory-matters-postgresql-configuring-max-connections-work-mem-effectively/"></a>
+  </article>
+
+  <article class="post-entry"> 
+    <header class="entry-header">
+      <h2 class="entry-hint-parent">PostgreSQL Configuration Chronicles: Memory Related Configurations
+      </h2>
+    </header>
+    <div class="entry-content">
+      <p>Introduction We explore the fundamental role memory plays within the architecture of PostgreSQL databases, shedding light on the intricacies of memory-related parameters and their profound impact on system performance and resource utilization. Our journey begins with an exploration of the memory architecture of PostgreSQL, uncovering the underlying mechanisms that govern memory allocation and usage within the database engine. From there, we’ll study on the crucial memory-related parameters that administrators must navigate to fine-tune their PostgreSQL deployments for optimal performance. We’ll dissect each parameter, discussing its significance and the potential ramifications of setting values too low or too high. We’ll guide you through the intricate process of configuring these parameters, providing step-by-step instructions to ensure your PostgreSQL instance is finely tuned to meet the demands of your workload. And finally, we’ll bring theory into practice, embarking on a journey of benchmarking and analysis to uncover the real-world impact of these memory parameters on performance and resource utilization.
+...</p>
+    </div>
+    <footer class="entry-footer"><span title='2024-04-24 00:00:00 +0000 UTC'>April 24, 2024</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
+    <a class="entry-link" aria-label="post link to PostgreSQL Configuration Chronicles: Memory Related Configurations" href="https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-memory-related-configurations/"></a>
+  </article>
+
+  <article class="post-entry"> 
+    <header class="entry-header">
+      <h2 class="entry-hint-parent">PostgreSQL Configuration Chronicles: Updates and Fillfactor for Optimal Database Performance
+      </h2>
+    </header>
+    <div class="entry-content">
+      <p>Introduction The optimization of table configurations plays a pivotal role in achieving efficient data operations. PostgreSQL, renowned for its flexibility and extensibility, offers a spectrum of configuration options to fine-tune database performance. Among these configurations, the fillfactor setting stands out as a key component, influencing the storage and organization of table data. However, it’s just one piece of the puzzle. In this blog post, we’ll embark on a journey to explore various table configuration options in PostgreSQL and how they can be leveraged collectively to elevate update performance and streamline database operations.
+...</p>
+    </div>
+    <footer class="entry-footer"><span title='2024-04-22 00:00:00 +0000 UTC'>April 22, 2024</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
+    <a class="entry-link" aria-label="post link to PostgreSQL Configuration Chronicles: Updates and Fillfactor for Optimal Database Performance" href="https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-updates-fillfactor-optimal-database-performance/"></a>
+  </article>
+
+  <article class="post-entry"> 
+    <header class="entry-header">
+      <h2 class="entry-hint-parent">PostgreSQL Configuration Chronicles: Optimizing Timeout Settings for Performance Excellence
+      </h2>
+    </header>
+    <div class="entry-content">
+      <p>Introduction Even the most powerful databases require fine-tuning to meet specific performance needs. One critical aspect of PostgreSQL optimization is configuring timeout settings. In this guide, we’ll delve into the significance of setting timeout limits, particularly focusing on statement_timeout and lock_timeout, how to discover these settings, and the factors influencing timeout values.
+Table of Contents Why Setting Timeout Limits is Beneficial? How Can a DBA Discover PostgreSQL Settings Containing Timeout? What Factors Affect Timeout Values? Timeout Parameters Overview Configuring Timeouts Conclusion Why Setting Timeout Limits is Beneficial? Timeout limits play a pivotal role in maintaining the efficiency and reliability of PostgreSQL databases. Here’s why:
+...</p>
+    </div>
+    <footer class="entry-footer"><span title='2024-04-09 00:00:00 +0000 UTC'>April 9, 2024</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
+    <a class="entry-link" aria-label="post link to PostgreSQL Configuration Chronicles: Optimizing Timeout Settings for Performance Excellence" href="https://kylorend3r.github.io/posts/postgresql-configuration-chronicles-optimizing-timeout-settings-performance-excellence/"></a>
+  </article>
+
+  <article class="post-entry"> 
+    <header class="entry-header">
+      <h2 class="entry-hint-parent">Optimizing PostgreSQL Tables: Exploring Vacuuming Strategies to Combat Bloat
+      </h2>
+    </header>
+    <div class="entry-content">
+      <p>Introduction When it comes to managing a PostgreSQL database, one of the key concerns that database administrators face is bloat. Bloat refers to the unnecessary growth of database objects, such as tables and indexes, leading to inefficient storage utilization and degraded performance. In this article, we will jump into what bloat is, why it matters, and how it can be increased.
+Table of Contents What is Bloat in PostgreSQL? Why Does Bloat Matter? Factors Contributing to Bloat How to Analyze Bloat in Tables Cleaning Bloat Vacuum Pg_Repack Conclusion What is Bloat in PostgreSQL? In PostgreSQL, bloat occurs when database objects occupy more space than is necessary for storing the actual data. This excess space consumption can result from various factors such as outdated statistics, frequent updates and deletions, or inefficient maintenance operations.
+...</p>
+    </div>
+    <footer class="entry-footer"><span title='2024-04-08 00:00:00 +0000 UTC'>April 8, 2024</span>&nbsp;·&nbsp;<span>kylorend3r</span></footer>
+    <a class="entry-link" aria-label="post link to Optimizing PostgreSQL Tables: Exploring Vacuuming Strategies to Combat Bloat" href="https://kylorend3r.github.io/posts/optimizing-postgresql-tables-exploring-vacuuming-strategies-combat-bloat/"></a>
+  </article>
     </main>
     
 <footer class="footer">
