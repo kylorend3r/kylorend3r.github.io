@@ -1,5 +1,5 @@
 +++
-title = 'Two Parameters, One Misunderstanding: synchronous_standby_names vs synchronized_standby_slots'
+title = 'Same Cluster, Different Rules. synchronous_standby_names vs synchronized_standby_slots'
 date = '2026-04-05'
 draft = false
 description = 'Understanding why synchronous_standby_names and synchronized_standby_slots are independent in PostgreSQL, and how misconfiguring them together can silently break your HA setup'
