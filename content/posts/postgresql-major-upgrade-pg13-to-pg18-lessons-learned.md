@@ -21,17 +21,8 @@ author = 'kylorend3r'
 - [Preflight: The Most Important Phase](#preflight-the-most-important-phase)
 - [Why Upgrade Process Was Dangerous and Risky Still](#why-upgrade-process-was-dangerous-and-risky-still)
   - [Logical Replication: Two Scenarios](#logical-replication-two-scenarios)
-- [Problem 1: NOT NULL Constraint Naming Collision](#problem-1-not-null-constraint-naming-collision)
-  - [The Root Cause](#the-root-cause)
-  - [The Scenario That Triggers It](#the-scenario-that-triggers-it)
-  - [The Fix](#the-fix)
-  - [Community Bug Report](#community-bug-report)
-  - [Summary for This Problem](#summary-for-this-problem)
-- [Problem 2: pg\_init\_privs Orphan OIDs After Database Rename](#problem-2-pg_init_privs-orphan-oids-after-database-rename)
-  - [Background: What is pg\_init\_privs](#background-what-is-pg_init_privs)
-  - [The Sequence That Produces Orphan OIDs](#the-sequence-that-produces-orphan-oids)
-  - [How This Breaks pg\_upgrade](#how-this-breaks-pg_upgrade)
-  - [The Fix: Clean Up Orphan OIDs Before Upgrading](#the-fix-clean-up-orphan-oids-before-upgrading)
+  - [The Constraint That Existed Twice](#the-constraint-that-existed-twice)
+  - [The Role That Was Gone But Not Forgotten](#the-role-that-was-gone-but-not-forgotten)
 - [Post-Upgrade Metrics and Validation](#post-upgrade-metrics-and-validation)
   - [Log Prerequisites](#log-prerequisites)
   - [Error and Fatal Rate](#error-and-fatal-rate)
@@ -298,13 +289,11 @@ The `copy_data = false` flag is critical here. Without it, PostgreSQL treats the
 
 The critical difference between the two scenarios is not whether `REFRESH PUBLICATION` runs — it runs in both — but whether `copy_data = false` is included. Getting this wrong in the subscriber direction triggers an accidental full table copy. Getting it wrong in the publisher direction (adding `copy_data = false` when `pg_subscription_rel` is already gone) causes a silent replication stall.
 
----
-
-## Problem 1: NOT NULL Constraint Naming Collision
+### The Constraint That Existed Twice
 
 This is the first real bug we discovered — one that caused `pg_upgrade` to fail partway through the `pg_restore` phase, and which we raised with the PostgreSQL community.
 
-### The Root Cause
+#### The Root Cause
 
 In PostgreSQL 13 and earlier, `NOT NULL` column constraints are not stored as rows in `pg_constraint`. They are stored as a boolean flag `attnotnull` in `pg_attribute`. In PostgreSQL 17 and later, `NOT NULL` constraints are stored as first-class rows in `pg_constraint` with `contype = 'n'`.
 
@@ -316,7 +305,7 @@ pg_constraint_conrelid_contypid_conname_index UNIQUE (conrelid, contypid, connam
 
 Now consider a common pattern in production schemas: a `CHECK` constraint that explicitly validates `NOT NULL`, often used before PostgreSQL had proper `NOT NULL` constraint support, or carried over from ORMs and migration tools. If that check constraint happens to be named `{table_name}_{column_name}_not_null`, you have a collision. `pg_upgrade` tries to insert a new row with the same name that already exists in the constraint catalog — and the unique index rejects it.
 
-### The Scenario That Triggers It
+#### The Scenario That Triggers It
 
 ```sql
 CREATE TABLE orders (
@@ -345,7 +334,7 @@ orders_2024_02_customer_id_not_null | orders_2024_02 | n
 
 For the parent table `orders`, the new `not_null` constraint name collides with the existing check constraint name. `pg_restore` fails with a duplicate key violation and the entire upgrade aborts. For partitioned tables this is compounded because every partition inherits the check constraint, multiplying the number of collisions.
 
-### The Fix
+#### The Fix
 
 The workaround is to rename the conflicting check constraints before the upgrade. Use the following query to identify all candidates:
 
@@ -369,7 +358,7 @@ This query surfaces every `CHECK (column IS NOT NULL)` constraint whose name mat
 
 One important caveat: **you cannot rename a constraint on an inherited child partition directly**. The rename must happen on the parent table. PostgreSQL will propagate it to the children.
 
-### Community Bug Report
+#### Community Bug Report
 
 After hitting this failure in production, we filed a bug report with the PostgreSQL community mailing list. We provided a minimal reproduction case, traced the code path through `pg_upgrade`'s restore phase, and reviewed the proposed patch. The bug was confirmed by the community and the fix was merged. **This bug is resolved in PostgreSQL 18.2.** You can follow the full discussion and patch review here: [postgresql.org mailing list thread](https://www.postgresql.org/message-id/19393-6a82427485a744cf%40postgresql.org).
 
@@ -385,26 +374,24 @@ WHERE c.contype = 'c'
 
 Only drop parent constraints — child partition constraints are dropped automatically.
 
-### Summary for This Problem
+#### Summary for This Problem
 
 1. Before upgrading, run the detection query on every database in the cluster.
 2. If rows are returned, rename the matching constraints using the generated scripts.
 3. Test `pg_upgrade --check` on a clone before touching production.
 4. After upgrading, drop the now-redundant check constraints.
 
----
-
-## Problem 2: pg_init_privs Orphan OIDs After Database Rename
+### The Role That Was Gone But Not Forgotten
 
 The second problem is subtler and harder to anticipate. It surfaces only under a specific sequence of operations that is not uncommon in long-running production environments: a database was renamed, its owner role was reassigned and dropped, and later the cluster was upgraded.
 
-### Background: What is pg_init_privs
+#### Background: What is pg_init_privs
 
 `pg_init_privs` is a system catalog that records the initial privileges of objects at the time they were created — either by `initdb` or by `CREATE EXTENSION`. When you install an extension, PostgreSQL records which roles were granted privileges on the extension's objects (functions, views, tables) at install time. These records serve as the baseline for privilege comparison and are used during `pg_upgrade` to restore the original access control state on the new cluster.
 
 The important thing to understand is that `pg_init_privs` records role OIDs, not role names. If a role is later dropped, the OID reference in `pg_init_privs` becomes a dangling pointer. There is no foreign key constraint enforcing referential integrity here.
 
-### The Sequence That Produces Orphan OIDs
+#### The Sequence That Produces Orphan OIDs
 
 ```sql
 -- 1. Create a database with a dedicated owner role
@@ -457,7 +444,7 @@ AND ace.grantee <> 0;
 
 If this query returns rows, you have dangling OID references in `pg_init_privs`.
 
-### How This Breaks pg_upgrade
+#### How This Breaks pg_upgrade
 
 During `pg_upgrade`, the schema of each database is dumped with `pg_dump` and then restored with `pg_restore` into the new cluster. When `pg_restore` processes the access control entries for `pg_wait_sampling`'s functions, it encounters the `pg_init_privs` record and generates SQL like:
 
@@ -479,7 +466,7 @@ pg_restore: error: could not execute query: ERROR: role "16461" does not exist
 
 The restore fails with `--exit-on-error` and `pg_upgrade` aborts.
 
-### The Fix: Clean Up Orphan OIDs Before Upgrading
+#### The Fix: Clean Up Orphan OIDs Before Upgrading
 
 The mitigation is to run preflight checks against `pg_init_privs` across all databases before starting `pg_upgrade`. There are three categories to check:
 
