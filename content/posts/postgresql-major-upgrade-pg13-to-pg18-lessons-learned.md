@@ -1,0 +1,626 @@
++++
+title = 'PostgreSQL Major Upgrade: From PG13 to PG18 — Design, Real Risks, and the Bugs We Found Along the Way'
+date = '2026-05-14'
+draft = false
+description = 'A practical guide to planning and executing a PostgreSQL major version upgrade at scale: why we upgraded, how we designed the playbook, why the process was still dangerous, and two real bugs we discovered, reported to the community, and solved.'
+tags = ['postgresql', 'upgrade', 'pg_upgrade', 'vacuum', 'performance', 'database', 'replication', 'pg_init_privs']
+author = 'kylorend3r'
++++
+
+## Table of Contents
+
+- [Table of Contents](#table-of-contents)
+- [Why We Upgraded](#why-we-upgraded)
+  - [VACUUM Improvements](#vacuum-improvements)
+  - [WAL Insert Lock Optimization](#wal-insert-lock-optimization)
+  - [Logical Replication Improvements](#logical-replication-improvements)
+  - [Monitoring Improvements](#monitoring-improvements)
+- [What We Considered Before Upgrading](#what-we-considered-before-upgrading)
+- [Choosing the Target Version: PostgreSQL 17 or 18](#choosing-the-target-version-postgresql-17-or-18)
+- [The Upgrade Playbook Design](#the-upgrade-playbook-design)
+- [Preflight: The Most Important Phase](#preflight-the-most-important-phase)
+- [Why Upgrade Process Was Dangerous and Risky Still](#why-upgrade-process-was-dangerous-and-risky-still)
+  - [Logical Replication: Two Scenarios](#logical-replication-two-scenarios)
+- [Problem 1: NOT NULL Constraint Naming Collision](#problem-1-not-null-constraint-naming-collision)
+  - [The Root Cause](#the-root-cause)
+  - [The Scenario That Triggers It](#the-scenario-that-triggers-it)
+  - [The Fix](#the-fix)
+  - [Community Bug Report](#community-bug-report)
+  - [Summary for This Problem](#summary-for-this-problem)
+- [Problem 2: pg\_init\_privs Orphan OIDs After Database Rename](#problem-2-pg_init_privs-orphan-oids-after-database-rename)
+  - [Background: What is pg\_init\_privs](#background-what-is-pg_init_privs)
+  - [The Sequence That Produces Orphan OIDs](#the-sequence-that-produces-orphan-oids)
+  - [How This Breaks pg\_upgrade](#how-this-breaks-pg_upgrade)
+  - [The Fix: Clean Up Orphan OIDs Before Upgrading](#the-fix-clean-up-orphan-oids-before-upgrading)
+- [Post-Upgrade Metrics and Validation](#post-upgrade-metrics-and-validation)
+  - [Log Prerequisites](#log-prerequisites)
+  - [Running the Analysis](#running-the-analysis)
+  - [Error and Fatal Rate](#error-and-fatal-rate)
+  - [Slow Query Volume](#slow-query-volume)
+  - [Cancelled Queries](#cancelled-queries)
+  - [Checkpoint Duration](#checkpoint-duration)
+  - [Autovacuum Duration](#autovacuum-duration)
+- [Conclusion: A Checklist for DBAs](#conclusion-a-checklist-for-dbas)
+
+---
+
+## Why We Upgraded
+
+PostgreSQL major version upgrades are rarely simple. The larger the cluster — more databases, more extensions, more replication topology — the more moving parts you have to coordinate simultaneously. This post documents our journey upgrading a production PostgreSQL infrastructure from version 13 to version 18. It covers the reasons that drove the decision, the automated playbook we designed to handle it, the edge cases we discovered along the way, and most importantly, two non-obvious bugs we encountered and had to solve before the upgrade could succeed.
+
+The goal is not just to share what happened to us — it is to give you a concrete checklist so that your upgrade does not fail on something that ours already did.
+
+PostgreSQL 13 served us well, but over time several areas started showing their age under production load. Four stood out: autovacuum performance, WAL write throughput under concurrent load, logical replication maturity, and observability. All four are areas where PostgreSQL 14 through 18 made significant improvements that directly impacted our operational stability. The sections below cover each in detail.
+
+---
+
+## VACUUM Improvements
+
+### Bottom-Up Index Deletion
+
+PostgreSQL 14 introduced `bottom-up index deletion` for B-tree indexes. Before this change, heavy `UPDATE` workloads on tables with indexed columns caused significant index bloat. Every update creates a new heap tuple version and a new index entry pointing to it. Under high-update traffic, index pages would fill up with stale entries pointing to dead heap tuples, leading to page splits and growing index size.
+
+Bottom-up deletion changes this. Instead of splitting the page when it is full, the running process first scans the current index leaf page for older entries pointing to dead heap tuples. It removes those stale entries in-place to make room for the new entry, often avoiding the page split entirely. The result is less bloat and less index maintenance overhead.
+
+### compactify_tuples Performance
+
+The `compactify_tuples` function is used by both VACUUM and autovacuum after removing dead tuples from a heap page. In PostgreSQL 14 this function was optimized, and the improvement flows directly into vacuum performance. Benchmarks show VACUUM running approximately 25% faster on the same workload — from 4.1 seconds down to 2.9 seconds for a heavy-update test table.
+
+### Radix Tree TID Store (PostgreSQL 17+)
+
+This is one of the most impactful improvements for autovacuum-heavy environments. PostgreSQL 17 replaced the internal array used to track dead tuple IDs (TIDs) during vacuum with a Radix Tree implementation. The problem with the old array was capacity: once autovacuum exhausted the memory budget tracked by `maintenance_work_mem` or `autovacuum_work_mem`, it had to stop, process all indexes, and then resume heap scanning. This cycle repeated multiple times on large tables.
+
+A Radix Tree is dramatically more memory-efficient for sparse TID sets. The same memory budget now holds far more TIDs, meaning autovacuum can complete a heap pass in fewer index vacuum rounds. The practical result is that autovacuum runs shorter and touches I/O less frequently.
+
+We benchmarked this directly. A 50-million-row table was created on both PostgreSQL 12 and PostgreSQL 17, an `UPDATE` was issued to touch every row, and autovacuum was monitored via `pg_stat_progress_vacuum`:
+
+```sql
+CREATE TABLE test AS SELECT * FROM generate_series(1, 50000000) x(id);
+CREATE INDEX ON test(id);
+UPDATE test SET id = id - 1;
+SELECT * FROM pg_stat_progress_vacuum \watch
+```
+
+On PostgreSQL 13, the `index_vacuum_count` reached 3 by the time the heap was only half-scanned — the TID array had filled up and forced multiple index passes. On PostgreSQL 17, the entire 50-million-row table was processed in a single index vacuum round.
+
+![pg_stat_progress_vacuum live monitoring — PG12 vs PG17 during the 50M-row benchmark](/images/posts/postgresql-major-upgrade-pg13-to-pg18-lessons-learned/Screenshot%202024-10-28%20at%2008.08.14.png)
+
+The overall conclusion from our benchmarks: autovacuum on PostgreSQL 12/13 is at least 4 times slower than on PostgreSQL 17 for tables with high dead tuple density. This directly translates to less I/O pressure, lower CPU usage during maintenance windows, and reduced risk of autovacuum falling behind on large tables.
+
+![Autovacuum duration comparison: PostgreSQL 12 (~950s) vs PostgreSQL 17 (~225s)](/images/posts/postgresql-major-upgrade-pg13-to-pg18-lessons-learned/upgrade_vacuum_benchmark.png)
+
+### Asynchronous I/O for Sequential Scans
+
+PostgreSQL 18 introduces an asynchronous I/O subsystem that benefits sequential scans, which VACUUM relies on heavily for heap scanning. By reducing I/O wait time during the heap scan phase, the entire vacuum cycle completes faster, particularly on storage with high latency.
+
+---
+
+## WAL Insert Lock Optimization
+
+On high-core-count systems with concurrent write workloads, PostgreSQL 13 and earlier had a scalability ceiling caused by `WALInsertLock`. When multiple backends concurrently wrote WAL records, they contended on an exclusive lightweight lock to reserve space in the WAL buffer and copy their record. Only one backend could proceed at a time. On systems with many CPU cores and hundreds of concurrent transactions, this lock became a significant bottleneck that capped transactions per second regardless of available hardware.
+
+PostgreSQL 14 replaced this lock with atomic CPU operations (compare-and-swap instructions) for the common case of reserving WAL buffer space. Multiple backends can now reserve space simultaneously. The lock is only acquired for infrequent heavy operations like buffer flush or wrap-around. The result is that WAL write throughput scales much more linearly with CPU core count.
+
+Our pgbench benchmark across 100 concurrent clients and 4 threads made this concrete:
+
+```text
+PostgreSQL 13 — 100 clients, 4 threads
+TPS:              10,426
+Average latency:  9.591 ms
+Total transactions: 1,252,152
+
+PostgreSQL 17 — 100 clients, 4 threads
+TPS:              12,713
+Average latency:  7.866 ms
+Total transactions: 1,526,517
+Failed:           0
+```
+
+A ~22% TPS improvement and ~18% latency reduction under the same concurrent load. PostgreSQL 13 has a lower ceiling for concurrent writes — a scalability risk that compounds as transaction volume grows.
+
+PS: The following benchmark results rely on pgbench outputs. Within a real production environment the results can differ — better or worse depending on workload. Therefore, do not treat these numbers as guaranteed improvements.
+
+![WAL Insert Lock Benchmark)](/images/posts/postgresql-major-upgrade-pg13-to-pg18-lessons-learned/wal_benchmark.png)
+
+---
+
+## Logical Replication Improvements
+
+Logical replication in PostgreSQL 13 was functional but limited in ways that required workarounds at scale. The versions from 14 to 17 closed most of those gaps.
+
+**Streaming large transactions (PG14).** In PG13, any transaction too large to fit in `logical_decoding_work_mem` was spilled to disk on the publisher and only sent to the subscriber after the commit. For large bulk operations, this created a significant latency spike on the subscriber side — the entire transaction arrived at once as a single burst. PG14 added streaming mode: large in-progress transactions are now streamed to the subscriber incrementally as WAL is decoded, so the subscriber can start applying changes before the transaction commits. The burst disappears.
+
+**Row and column filters on publications (PG14/PG15).** PG14 added `WHERE` clause filters to `CREATE PUBLICATION`, so only rows matching a predicate are replicated. PG15 added column-level filters, allowing publications to replicate a subset of columns from a table. Together these make selective replication a first-class feature rather than a workaround done with views or separate tables.
+
+**Logical replication from standbys (PG16).** Before PG16, logical subscribers had to connect directly to the primary. Under heavy replication load this added CPU and I/O pressure to the primary. PG16 allows standbys to act as logical replication sources, offloading decoding work from the primary entirely. For clusters with many logical subscribers this is a meaningful architectural relief.
+
+**Built-in slot failover (PG17).** In PG13, protecting logical replication slots across a primary failover required the `pg_failover_slots` extension. PG17 introduced `synchronized_standby_slots`, which replicates slot state to standbys natively. After a failover the promoted standby already has the slot with the correct LSN, and subscribers reconnect without data loss or manual intervention. Removing the `pg_failover_slots` dependency simplifies the extension inventory and the upgrade surface itself.
+
+---
+
+## Monitoring Improvements
+
+Visibility into what PostgreSQL is doing internally was one of the weaker areas in PG13. Three views added between PG14 and PG16 made a concrete difference to how we diagnose problems.
+
+**`pg_stat_wal` (PG14).** This view exposes WAL write statistics: records written, bytes written, full-page writes, and sync counts along with their total durations. Before PG14, the only way to measure WAL write overhead was through OS-level tools or indirect inference from `pg_stat_bgwriter`. `pg_stat_wal` makes WAL pressure directly visible and queryable:
+
+```sql
+SELECT wal_records, wal_bytes, wal_sync, wal_sync_time
+FROM pg_stat_wal;
+```
+
+**`pg_stat_io` (PG16).** This is the most significant observability improvement in the range. `pg_stat_io` breaks down I/O operations by backend type (client backends, autovacuum workers, WAL writer, checkpointer, etc.), I/O object (relation, temp relation, WAL), and I/O context (normal, vacuum, bulkread). For the first time it is possible to answer "which process type is generating most of the read I/O right now?" directly from SQL without reaching for `iostat` or storage-level metrics:
+
+```sql
+SELECT backend_type, object, context,
+       reads, writes, hits,
+       read_time, write_time
+FROM pg_stat_io
+ORDER BY reads DESC;
+```
+
+This view became indispensable for diagnosing I/O contention between autovacuum and application traffic post-upgrade.
+
+**`pg_stat_subscription_stats` (PG16).** For clusters with logical subscribers, this view adds per-subscription error counters: `apply_error_count` and `sync_error_count`. In PG13 a subscription that hit an error logged it and stalled, with no aggregate counter to alert on. PG16 makes subscription health alertable with a simple threshold query:
+
+```sql
+SELECT subname, apply_error_count, sync_error_count
+FROM pg_stat_subscription_stats
+WHERE apply_error_count > 0 OR sync_error_count > 0;
+```
+
+---
+
+## What We Considered Before Upgrading
+
+Deciding to upgrade is the easy part. Deciding how to upgrade safely at scale requires thinking through every dependency that `pg_upgrade` does not handle for you. Here is what we mapped out before writing a single line of automation.
+
+**Replication topology.** Our clusters run a primary plus multiple streaming secondaries. `pg_upgrade` runs only on the primary. The secondaries must be re-synchronized afterward via rsync. This means upgrade downtime is roughly: stop services + pg_upgrade duration + rsync duration × secondary count.
+
+**Logical replication slots are not preserved.** `pg_upgrade` does not carry over `pg_replication_slots`. If your cluster has downstream logical subscribers, their slots vanish after upgrade. The subscribers' `pg_subscription` records still exist, but there is no corresponding slot on the publisher anymore. This requires a coordinated dance: disable subscriptions on subscribers before upgrade, recreate slots on the publisher after upgrade, then re-enable and refresh subscriptions. This is one of the less-documented failure modes of production upgrades.
+
+**Physical replication slot names.** If secondaries connect via named physical replication slots rather than `primary_slot_name` GUC, those slot names must be captured before the upgrade and recreated after starting the new PostgreSQL instance on the primary.
+
+**Extensions.** Not all extensions ship in the standard `contrib` package. Extensions like `pg_failover_slots` or `pg_wait_sampling` require separate packages for the target version. If the package does not exist on the host before upgrade, `pg_upgrade --check` will fail. Preflight must detect all non-contrib extensions installed on the cluster.
+
+**Backup tooling.** If Barman is managing backups for the cluster, its configuration references the source PostgreSQL binary path (`path_prefix`). After upgrade, this must be updated to point to the new binary directory. Barman also needs a fresh base backup from the upgraded cluster.
+
+**Connection management.** Before stopping PostgreSQL, all write roles should be set to `NOLOGIN` to drain connections cleanly. Active connections should be terminated. Exporters and monitoring agents that hold connections must be stopped. All of this must happen in the right order to avoid a dirty shutdown.
+
+**Stats and optimizer hygiene.** After upgrade, `pg_statistic` is carried over but not re-analyzed. Run `vacuumdb --analyze-in-stages` immediately after startup to rebuild statistics incrementally without flooding the system.
+
+---
+
+## Choosing the Target Version: PostgreSQL 17 or 18
+
+Before writing a single line of the upgrade playbook, we had to settle a more fundamental question: upgrade to PostgreSQL 17, or go all the way to 18?
+
+PostgreSQL 18 was already released, with 18.1 available as a minor version. The case for going directly to 18 was compelling on several fronts. Most operationally significant is how `pg_upgrade` now handles optimizer statistics: PG18 preserves `pg_statistic` during the upgrade, eliminating the planner's cold-start period where query plans regress until `ANALYZE` catches up — a meaningful reduction in post-upgrade risk and the length of the observation window after cutover. Logical replication support has also matured considerably by 18, with more robust slot handling, subscriber state tracking, and failover behavior. On the application side, native UUIDV7 support and the new B-tree Skip Scan optimization — which lets the planner use a multi-column index even when the leading column is absent from the `WHERE` clause, particularly effective on low-cardinality leading columns — are the kind of improvements that benefit query performance without requiring any schema changes.
+
+The one concern with 18 is its asynchronous I/O subsystem. Async I/O is a brand-new code path, and at our scale we were not willing to bet a production upgrade on an I/O method with no production mileage yet. Fortunately PostgreSQL 18 provides an explicit escape hatch: setting `io_method = 'sync'` reverts the instance to the traditional synchronous I/O path used by every prior version:
+
+```
+# postgresql.conf
+io_method = 'sync'
+```
+
+With async I/O neutralized, the remaining PG18 improvements are all upside and carry no additional risk over upgrading to 17. We decided to go directly to PostgreSQL 18 with `io_method = 'sync'` set from day one, and revisit async I/O once it has accumulated more production mileage across the community.
+
+---
+
+## The Upgrade Playbook Design
+
+We encoded all of the above into an Ansible playbook that manages the full upgrade from a single control node. The playbook runs against `localhost` and delegates all database and file operations to remote hosts via `delegate_to`. It is organized into seven sequential phases, each controlled by Ansible tags so individual phases can be re-run in isolation:
+
+```
+┌─────────┐     ┌──────────┐     ┌─────────────┐     ┌─────────┐
+│  setup  │────▶│preflight │────▶│ preparation │────▶│ upgrade │
+└─────────┘     └──────────┘     └─────────────┘     └────┬────┘
+ Set facts        Validate          Install pkgs &          │
+ & versions       all pre-reqs      pg_upgrade --check      │
+                                                            ▼
+┌──────────────┐     ┌────────────────┐     ┌──────────────────┐
+│ post_upgrade │◀────│ start_services │◀────│      rsync       │
+└──────────────┘     └────────────────┘     └──────────────────┘
+ Verify replicas      Fix ownership           Sync upgraded data
+ Recreate slots       Create phys. slots      from primary to
+ vacuumdb             Start all instances     all secondaries
+ Refresh subscriptions
+```
+
+**Setup** always runs and sets all facts: source/target versions, data directories, binary paths, host lists.
+
+**Preflight** validates everything before any changes are made. This is the most important phase.
+
+**Preparation** installs the target PostgreSQL packages, runs `initdb`, and executes `pg_upgrade --check --jobs=4` to catch any catalog-level problems before touching production.
+
+**Upgrade** stops the cluster, runs `pg_upgrade --link --jobs=4` on the primary (using hard links so the upgrade is faster and rollback is structurally possible), and restores configuration files from pre-upgrade backups.
+
+**Rsync** concurrently synchronizes the upgraded data from the primary to all secondaries in parallel. Rsync flags exclude log directories to reduce transfer size: `--archive --delete --hard-links --size-only --no-inc-recursive --exclude='log'`.
+
+**Start Services** fixes ownership, handles WAL directory symlinks if a separate `/logs` mount exists, creates physical replication slots, and starts all instances.
+
+**Post Upgrade** verifies replica connectivity, recreates logical replication slots, re-enables subscriptions, restores login on write roles, runs `vacuumdb`, updates extensions, and updates Barman configuration.
+
+---
+
+## Preflight: The Most Important Phase
+
+The preflight phase is designed to surface every problem before the cluster is touched. Some of the checks that took significant iteration to get right:
+
+- **Inactive replication slot detection.** A physical slot that has not been consumed will hold back WAL deletion and can cause the upgrade to carry over stale slot state. Preflight alerts the operator before proceeding.
+- **Redo LSN sync check.** On a primary + secondaries cluster, if the secondaries are not fully caught up, rsyncing the upgraded primary data on top of a diverged secondary will produce a broken cluster. Preflight compares `pg_control_checkpoint` redo LSN across all instances.
+- **Extension inventory.** Preflight computes which installed extensions are not in the standard `contrib` list and surfaces them explicitly. The operator must confirm those packages are available for the target version before proceeding.
+- **WAL directory size.** We added a check that resolves the effective WAL path (including symlink detection), measures its size in GB, warns if it exceeds 500 GB, and flags any stale `pg_wal_*` directories left from previous upgrade attempts.
+- **Logical subscriber detection.** Preflight queries `pg_stat_replication` and `pg_replication_slots` to identify downstream logical subscribers, generates the slot recreation SQL, and verifies SSH connectivity to those subscriber hosts.
+
+The preflight phase ends with a human-readable summary and an explicit operator confirmation prompt before any destructive phase begins.
+
+---
+
+## Why Upgrade Process Was Dangerous and Risky Still
+
+### Logical Replication: Two Scenarios
+
+The logical replication handling required the most careful design because there are two completely different scenarios depending on the role of the instance being upgraded.
+
+**Scenario A — This instance is a publisher.** Other PostgreSQL instances subscribe to this cluster. Their slots (`pg_replication_slots`) are lost by `pg_upgrade`. Before upgrade, the playbook connects to each subscriber and runs:
+
+```sql
+ALTER SUBSCRIPTION your_subscription DISABLE;
+ALTER SUBSCRIPTION your_subscription SET (slot_name = NONE);
+```
+
+After upgrade, the playbook recreates all logical slots from a pre-generated SQL file, then re-attaches and re-enables each subscription. Because the subscriber was not upgraded, its `pg_subscription_rel` (per-table sync state) is intact and no `REFRESH PUBLICATION` is needed.
+
+**Scenario B — This instance is a subscriber.** The subscription definitions survive in `pg_subscription`, but `pg_subscription_rel` (which tracks per-table replication state) is not preserved by `pg_upgrade`. After upgrade the subscriber does not know which tables to replicate. The fix is to re-enable the subscription and run:
+
+```sql
+ALTER SUBSCRIPTION your_subscription REFRESH PUBLICATION WITH (copy_data = false);
+```
+
+This repopulates `pg_subscription_rel` without re-copying data.
+
+The critical difference: only the subscriber-upgraded scenario needs `REFRESH PUBLICATION`. Getting this wrong in either direction causes either a silent replication stall or an accidental full table copy.
+
+---
+
+## Problem 1: NOT NULL Constraint Naming Collision
+
+This is the first real bug we discovered — one that caused `pg_upgrade` to fail partway through the `pg_restore` phase, and which we raised with the PostgreSQL community.
+
+### The Root Cause
+
+In PostgreSQL 13 and earlier, `NOT NULL` column constraints are not stored as rows in `pg_constraint`. They are stored as a boolean flag `attnotnull` in `pg_attribute`. In PostgreSQL 17 and later, `NOT NULL` constraints are stored as first-class rows in `pg_constraint` with `contype = 'n'`.
+
+During `pg_upgrade`, when migrating the schema from PG13 to PG17+, PostgreSQL needs to create these new `NOT NULL` constraint rows. It generates constraint names automatically using the pattern `{table_name}_{column_name}_not_null`. It then inserts them into `pg_catalog.pg_constraint`, which has a unique index:
+
+```text
+pg_constraint_conrelid_contypid_conname_index UNIQUE (conrelid, contypid, conname)
+```
+
+Now consider a common pattern in production schemas: a `CHECK` constraint that explicitly validates `NOT NULL`, often used before PostgreSQL had proper `NOT NULL` constraint support, or carried over from ORMs and migration tools. If that check constraint happens to be named `{table_name}_{column_name}_not_null`, you have a collision. `pg_upgrade` tries to insert a new row with the same name that already exists in the constraint catalog — and the unique index rejects it.
+
+### The Scenario That Triggers It
+
+```sql
+CREATE TABLE orders (
+    id BIGSERIAL,
+    customer_id INTEGER NOT NULL,
+    CONSTRAINT orders_customer_id_not_null CHECK (customer_id IS NOT NULL)
+) PARTITION BY RANGE (order_date);
+```
+
+Before the upgrade (PG13), `pg_constraint` only shows the `CHECK` constraint:
+
+```text
+conname                      | table_name | contype
+orders_customer_id_not_null  | orders     | c
+orders_customer_id_not_null  | orders_2024_01 | c
+orders_customer_id_not_null  | orders_2024_02 | c
+```
+
+After the upgrade (PG17+), PostgreSQL tries to add:
+
+```text
+orders_customer_id_not_null  | orders     | n   ← NEW not_null constraint
+orders_2024_01_customer_id_not_null | orders_2024_01 | n
+orders_2024_02_customer_id_not_null | orders_2024_02 | n
+```
+
+For the parent table `orders`, the new `not_null` constraint name collides with the existing check constraint name. `pg_restore` fails with a duplicate key violation and the entire upgrade aborts. For partitioned tables this is compounded because every partition inherits the check constraint, multiplying the number of collisions.
+
+### The Fix
+
+The workaround is to rename the conflicting check constraints before the upgrade. Use the following query to identify all candidates:
+
+```sql
+SELECT
+    conrelid::regclass AS table_name,
+    conname AS constraint_name,
+    substring(pg_get_constraintdef(oid) FROM 'CHECK \(\((\w+) IS NOT NULL\)\)') AS column_name,
+    'ALTER TABLE ' || conrelid::regclass::text
+        || ' RENAME CONSTRAINT ' || conname
+        || ' TO ' || conrelid::regclass::text
+        || '_' || substring(pg_get_constraintdef(oid) FROM 'CHECK \(\((\w+) IS NOT NULL\)\)')
+        || '_not_null1;' AS rename_script
+FROM pg_constraint
+WHERE contype = 'c'
+  AND conname LIKE '%\_not\_null' ESCAPE '\'
+  AND pg_get_constraintdef(oid) LIKE '%NOT NULL%';
+```
+
+This query surfaces every `CHECK (column IS NOT NULL)` constraint whose name matches the pattern that `pg_upgrade` will attempt to generate. The `rename_script` column produces the `ALTER TABLE ... RENAME CONSTRAINT` statements you need to run.
+
+One important caveat: **you cannot rename a constraint on an inherited child partition directly**. The rename must happen on the parent table. PostgreSQL will propagate it to the children.
+
+### Community Bug Report
+
+After hitting this failure in production, we filed a bug report with the PostgreSQL community mailing list. We provided a minimal reproduction case, traced the code path through `pg_upgrade`'s restore phase, and reviewed the proposed patch. The bug was confirmed by the community and the fix was merged. **This bug is resolved in PostgreSQL 18.2.** You can follow the full discussion and patch review here: [postgresql.org mailing list thread](https://www.postgresql.org/message-id/19393-6a82427485a744cf%40postgresql.org).
+
+After the upgrade succeeds, the renamed check constraints become redundant because PG17+ now tracks `NOT NULL` natively. Use this query on the upgraded cluster to generate the cleanup:
+
+```sql
+SELECT 'ALTER TABLE ' || c.conrelid::regclass || ' DROP CONSTRAINT ' || c.conname || ';'
+FROM pg_constraint c
+WHERE c.contype = 'c'
+  AND pg_get_constraintdef(c.oid) LIKE '%IS NOT NULL%'
+  AND c.conparentid = 0;
+```
+
+Only drop parent constraints — child partition constraints are dropped automatically.
+
+### Summary for This Problem
+
+1. Before upgrading, run the detection query on every database in the cluster.
+2. If rows are returned, rename the matching constraints using the generated scripts.
+3. Test `pg_upgrade --check` on a clone before touching production.
+4. After upgrading, drop the now-redundant check constraints.
+
+---
+
+## Problem 2: pg_init_privs Orphan OIDs After Database Rename
+
+The second problem is subtler and harder to anticipate. It surfaces only under a specific sequence of operations that is not uncommon in long-running production environments: a database was renamed, its owner role was reassigned and dropped, and later the cluster was upgraded.
+
+### Background: What is pg_init_privs
+
+`pg_init_privs` is a system catalog that records the initial privileges of objects at the time they were created — either by `initdb` or by `CREATE EXTENSION`. When you install an extension, PostgreSQL records which roles were granted privileges on the extension's objects (functions, views, tables) at install time. These records serve as the baseline for privilege comparison and are used during `pg_upgrade` to restore the original access control state on the new cluster.
+
+The important thing to understand is that `pg_init_privs` records role OIDs, not role names. If a role is later dropped, the OID reference in `pg_init_privs` becomes a dangling pointer. There is no foreign key constraint enforcing referential integrity here.
+
+### The Sequence That Produces Orphan OIDs
+
+```sql
+-- 1. Create a database with a dedicated owner role
+CREATE DATABASE my_db OWNER benchmark_owner;
+\c my_db
+SET ROLE benchmark_owner;
+
+-- 2. Install an extension that writes to pg_init_privs
+CREATE EXTENSION pg_wait_sampling;
+RESET ROLE;
+```
+
+At this point `pg_init_privs` contains rows like:
+
+```text
+objoid | classoid | privtype | initprivs
+-------+----------+----------+------------------------------------------
+16425  | 1259     | e        | {16461=arwdDxt/16461,=r/16461}
+16430  | 1259     | e        | {16461=arwdDxt/16461,=r/16461}
+16435  | 1259     | e        | {16461=arwdDxt/16461,=r/16461}
+16439  | 1255     | e        | {16461=X/16461}
+```
+
+OID `16461` is the OID of `benchmark_owner`. Now, some time later, the database is renamed, the role is reassigned, and the role is dropped:
+
+```sql
+-- Terminate connections first
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity WHERE datname = 'my_db';
+
+ALTER DATABASE my_db RENAME TO my_db_v2;
+\c my_db_v2
+
+REASSIGN OWNED BY benchmark_owner TO postgres;
+DROP OWNED BY benchmark_owner;
+\c postgres
+DROP ROLE benchmark_owner;
+```
+
+After this sequence, `pg_init_privs` still contains rows referencing OID `16461`. PostgreSQL does not clean these up when a role is dropped. Verify this with:
+
+```sql
+SELECT pip.objoid
+FROM pg_init_privs pip
+CROSS JOIN LATERAL aclexplode(pip.initprivs) ace
+LEFT JOIN pg_authid a ON a.oid = ace.grantee
+WHERE a.oid IS NULL
+AND ace.grantee <> 0;
+```
+
+If this query returns rows, you have dangling OID references in `pg_init_privs`.
+
+### How This Breaks pg_upgrade
+
+During `pg_upgrade`, the schema of each database is dumped with `pg_dump` and then restored with `pg_restore` into the new cluster. When `pg_restore` processes the access control entries for `pg_wait_sampling`'s functions, it encounters the `pg_init_privs` record and generates SQL like:
+
+```sql
+SELECT pg_catalog.binary_upgrade_set_record_init_privs(true);
+REVOKE ALL ON FUNCTION "public"."pg_wait_sampling_reset_profile"() FROM PUBLIC;
+REVOKE ALL ON FUNCTION "public"."pg_wait_sampling_reset_profile"() FROM "postgres";
+SET SESSION AUTHORIZATION "16461";
+GRANT ALL ON FUNCTION "public"."pg_wait_sampling_reset_profile"() TO "16461";
+RESET SESSION AUTHORIZATION;
+SELECT pg_catalog.binary_upgrade_set_record_init_privs(false);
+```
+
+The OID `16461` has been serialized as a literal role identifier in the restore script. When `pg_restore` executes `SET SESSION AUTHORIZATION "16461"`, PostgreSQL looks up a role named `"16461"` — and finds nothing, because that role no longer exists. The error:
+
+```text
+pg_restore: error: could not execute query: ERROR: role "16461" does not exist
+```
+
+The restore fails with `--exit-on-error` and `pg_upgrade` aborts.
+
+### The Fix: Clean Up Orphan OIDs Before Upgrading
+
+The mitigation is to run preflight checks against `pg_init_privs` across all databases before starting `pg_upgrade`. There are three categories to check:
+
+**Check 1 — Dangling role OIDs in initprivs:**
+
+```sql
+SELECT pip.objoid, pip.initprivs, e.extname
+FROM pg_init_privs pip
+CROSS JOIN LATERAL aclexplode(pip.initprivs) ace
+LEFT JOIN pg_authid a ON a.oid = ace.grantee
+JOIN pg_depend d ON d.objid = pip.objoid
+JOIN pg_extension e ON e.oid = d.refobjid
+WHERE a.oid IS NULL
+AND ace.grantee <> 0;
+```
+
+**Check 2 — Orphaned pg_init_privs rows where the object itself no longer exists:**
+
+```sql
+SELECT pip.*
+FROM pg_init_privs pip
+WHERE NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.oid = pip.objoid)
+AND NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.oid = pip.objoid)
+AND NOT EXISTS (SELECT 1 FROM pg_type t WHERE t.oid = pip.objoid);
+```
+
+**Check 3 — Extensions whose owner role no longer exists:**
+
+```sql
+SELECT e.extname, e.extowner, a.rolname
+FROM pg_extension e
+LEFT JOIN pg_authid a ON a.oid = e.extowner
+WHERE a.rolname IS NULL;
+```
+
+After identifying the orphaned records, clean them up:
+
+```sql
+-- Remove dangling role OIDs from initprivs
+DELETE FROM pg_init_privs
+WHERE objoid IN (
+    SELECT pip.objoid
+    FROM pg_init_privs pip
+    CROSS JOIN LATERAL aclexplode(pip.initprivs) ace
+    LEFT JOIN pg_authid a ON a.oid = ace.grantee
+    WHERE a.oid IS NULL
+    AND ace.grantee <> 0
+);
+
+-- Remove rows whose objects no longer exist
+DELETE FROM pg_init_privs
+WHERE NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.oid = objoid)
+AND NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.oid = objoid)
+AND NOT EXISTS (SELECT 1 FROM pg_type t WHERE t.oid = objoid);
+```
+
+Run these checks and cleanups on every database in the cluster before running `pg_upgrade --check`. Any database that returns rows from Check 1 or Check 2 is a potential upgrade failure.
+
+We added this check as a mandatory preflight step in the playbook, tightened to filter by `privtype = 'e'` (extension-granted privileges) and extended to cover `pg_namespace` objects as well.
+
+---
+
+## Post-Upgrade Metrics and Validation
+
+Completing the upgrade is not the finish line — it is the start of the measurement window. To make the comparison systematic, we wrote a log analysis script that does a single pass through all PostgreSQL CSV log files, splits every event at the upgrade date boundary, and produces a before/after report across six metric categories. You supply the upgrade date and a slow query threshold; the script handles the rest.
+
+```bash
+./post-anal.sh /var/lib/pgsql/18/data/log
+# Prompts: upgrade date (YYYY-MM-DD) and slow query threshold (ms)
+```
+
+### Log Prerequisites
+
+The script reads `postgresql-*.csv` files produced by PostgreSQL's CSV logger. Before the upgrade, ensure these settings are active so the pre-upgrade baseline is captured in the same format:
+
+```
+log_destination         = 'csvlog'
+logging_collector       = on
+log_checkpoints         = on
+log_autovacuum_min_duration = 250ms   # low enough to capture most runs
+log_min_duration_statement  = 1000    # match your monitoring threshold
+```
+
+Without `log_checkpoints` and `log_autovacuum_min_duration` set before the upgrade, the before-side of the checkpoint and autovacuum comparisons will be empty.
+
+### Running the Analysis
+
+After the upgrade has been running for a representative period (at least one full business day of equivalent load), run:
+
+```bash
+./post-anal.sh /var/lib/pgsql/18/data/log
+Enter upgrade date (YYYY-MM-DD): 2026-04-10
+Enter log_min_duration_statement threshold in ms [e.g. 1000]: 1000
+```
+
+The script reads all log files in one pass, splits events before and after the upgrade date, computes counts, averages, and percentage deltas, and prints a structured report.
+
+### Error and Fatal Rate
+
+The first section of the report shows `ERROR`, `FATAL`, and `PANIC` counts before and after with a percentage change. This is the first health check: the total error rate should not increase after the upgrade. A spike here — especially new `FATAL` lines — indicates something wrong with the cluster configuration or extension compatibility that needs investigation before anything else.
+
+Constraint-level errors (duplicate key violations, constraint violations, replication conflicts) are broken out separately so they can be distinguished from infrastructure errors. These should be stable across the upgrade since they are application-driven.
+
+### Slow Query Volume
+
+The script counts every `LOG: duration: N ms` line where `N` exceeds the threshold you entered. After the upgrade, with faster autovacuum and reduced I/O contention during maintenance, the count of queries crossing that threshold should drop. A significant reduction here is the most direct confirmation that the performance improvements translated into real workload gains on your cluster.
+
+### Cancelled Queries
+
+Lock timeouts and statement timeouts are counted separately. Statement timeout cancellations are particularly informative: many of them are caused by queries blocked behind autovacuum I/O, which competes far less aggressively in PG17+. A reduction in `statement_timeout` cancellations after the upgrade — without any application-side changes — is a strong signal that autovacuum is no longer a hidden source of query latency.
+
+Lock timeout counts should remain stable. An increase there is worth investigating as a potential regression in locking behavior.
+
+### Checkpoint Duration
+
+The report shows average `write`, `sync`, and `total` checkpoint times before and after. Checkpoint improvements in PG18 come primarily from better I/O scheduling and the async I/O path (which we disabled with `io_method = sync`, so this category should show modest improvement at best). What to watch for: the `sync` time. A large sync time before the upgrade suggests I/O pressure during checkpoints that the new version may alleviate through better `maintenance_io_concurrency` handling even without async I/O.
+
+### Autovacuum Duration
+
+This is the most expected win. The report shows autovacuum run count, average duration per run, and total time spent in autovacuum before and after. On our clusters the average duration per run dropped by over 70%, and the total accumulated autovacuum time across the observation window dropped by a similar margin. Fewer and shorter autovacuum runs mean less I/O competition with application queries — which feeds back into the slow query and timeout counts above.
+
+---
+
+## Conclusion: A Checklist for DBAs
+
+A PostgreSQL major version upgrade is manageable if you do the right preparation. Here is the condensed checklist from everything above:
+
+**Before running pg_upgrade --check:**
+
+- [ ] Inventory all installed extensions. Verify the target version package exists for every non-contrib extension on every host.
+- [ ] Detect inactive physical or logical replication slots. Resolve or drop them.
+- [ ] Check all databases for `CHECK (column IS NOT NULL)` constraints whose name matches `{table}_{column}_not_null`. Rename any that match.
+- [ ] On every database, run the `pg_init_privs` orphan OID checks. Clean up any dangling role references.
+- [ ] Verify `pg_upgrade --check` passes cleanly on a production clone before the maintenance window.
+- [ ] Confirm secondaries are fully caught up (redo LSN matches primary).
+- [ ] Measure WAL directory size. Warn if it exceeds 500 GB.
+
+**During the upgrade window:**
+
+- [ ] Set write roles to `NOLOGIN` before stopping PostgreSQL.
+- [ ] Disable logical subscriptions on downstream subscribers before stopping the publisher.
+- [ ] Generate slot recreation SQL before running `pg_upgrade`.
+- [ ] Use `pg_upgrade --link` to avoid full data copy (but note: source data dir becomes unusable if the new cluster writes).
+- [ ] Rsync data to secondaries concurrently to minimize downtime.
+
+**After the upgrade:**
+
+- [ ] Recreate logical replication slots and re-enable subscriptions.
+- [ ] Run `REFRESH PUBLICATION WITH (copy_data = false)` on upgraded subscribers.
+- [ ] Run `vacuumdb --analyze-in-stages` to rebuild optimizer statistics.
+- [ ] Update extensions that require schema changes (e.g., `ALTER EXTENSION pg_stat_statements UPDATE`).
+- [ ] Drop redundant `CHECK (IS NOT NULL)` constraints that are now covered by native `NOT NULL` constraints.
+- [ ] Update Barman `path_prefix` to point to the new binary directory and take a fresh base backup.
+
+---
+
+Upgrading PostgreSQL across a major version boundary is never just a package swap. The gains from PG13 to PG18 — faster autovacuum, better WAL scalability, async I/O — are real and measurable, but so are the failure modes. The two bugs we hit were not edge cases in theory; they were invisible until the upgrade ran. Finding them cost us time, but filing the bug report and watching the patch land in PG18.2 made it worthwhile.
+
+The checklist above is everything we wish we had before we started. Run it on a clone first, fix what it surfaces, then run the real upgrade with confidence.
