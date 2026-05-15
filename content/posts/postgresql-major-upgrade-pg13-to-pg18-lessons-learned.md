@@ -9,15 +9,16 @@ author = 'kylorend3r'
 
 ## Table of Contents
 
+- [Table of Contents](#table-of-contents)
 - [Why We Upgraded](#why-we-upgraded)
-  - [VACUUM Improvements](#vacuum-improvements)
-    - [Bottom-Up Index Deletion](#bottom-up-index-deletion)
-    - [compactify\_tuples Performance](#compactify_tuples-performance)
-    - [Radix Tree TID Store (PostgreSQL 17+)](#radix-tree-tid-store-postgresql-17)
-    - [Asynchronous I/O for Sequential Scans](#asynchronous-io-for-sequential-scans)
-  - [WAL Insert Lock Optimization](#wal-insert-lock-optimization)
-  - [Logical Replication Improvements](#logical-replication-improvements)
-  - [Monitoring Improvements](#monitoring-improvements)
+- [VACUUM Improvements](#vacuum-improvements)
+  - [Bottom-Up Index Deletion](#bottom-up-index-deletion)
+  - [compactify\_tuples Performance](#compactify_tuples-performance)
+  - [Radix Tree TID Store (PostgreSQL 17+)](#radix-tree-tid-store-postgresql-17)
+  - [Asynchronous I/O for Sequential Scans](#asynchronous-io-for-sequential-scans)
+- [WAL Insert Lock Optimization](#wal-insert-lock-optimization)
+- [Logical Replication Improvements](#logical-replication-improvements)
+- [Monitoring Improvements](#monitoring-improvements)
 - [What We Considered Before Upgrading](#what-we-considered-before-upgrading)
 - [Choosing the Target Version: PostgreSQL 17 or 18](#choosing-the-target-version-postgresql-17-or-18)
 - [The Upgrade Playbook Design](#the-upgrade-playbook-design)
@@ -215,21 +216,7 @@ We decided to go directly to PostgreSQL 18 with `io_method = 'sync'` and plan to
 
 We encoded all of the above into an Ansible playbook that manages the full upgrade from a single control node. The playbook runs against `localhost` and delegates all database and file operations to remote hosts via `delegate_to`. It is organized into seven sequential phases, each controlled by Ansible tags so individual phases can be re-run in isolation:
 
-```
-┌─────────┐     ┌──────────┐     ┌─────────────┐     ┌─────────┐
-│  setup  │────▶│preflight │────▶│ preparation │────▶│ upgrade │
-└─────────┘     └──────────┘     └─────────────┘     └────┬────┘
- Set facts        Validate          Install pkgs &          │
- & versions       all pre-reqs      pg_upgrade --check      │
-                                                            ▼
-┌──────────────┐     ┌────────────────┐     ┌──────────────────┐
-│ post_upgrade │◀────│ start_services │◀────│      rsync       │
-└──────────────┘     └────────────────┘     └──────────────────┘
- Verify replicas      Fix ownership           Sync upgraded data
- Recreate slots       Create phys. slots      from primary to
- vacuumdb             Start all instances     all secondaries
- Refresh subscriptions
-```
+![WAL Insert Lock Benchmark)](/images/posts/postgresql-major-upgrade-pg13-to-pg18-lessons-learned/pg_upgrade_phases_diagram.svg)
 
 **Setup** always runs and sets all facts: source/target versions, data directories, binary paths, host lists.
 
