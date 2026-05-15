@@ -194,16 +194,16 @@ Deciding to upgrade is the easy part. Deciding how to upgrade safely at scale re
 
 Before writing a single line of the upgrade playbook, we had to settle a more fundamental question: upgrade to PostgreSQL 17, or go all the way to 18?
 
-PostgreSQL 18 was already released, with 18.1 available as a minor version. The case for going directly to 18 was compelling on several fronts. Most operationally significant is how `pg_upgrade` now handles optimizer statistics: PG18 preserves `pg_statistic` during the upgrade, eliminating the planner's cold-start period where query plans regress until `ANALYZE` catches up — a meaningful reduction in post-upgrade risk and the length of the observation window after cutover. Logical replication support has also matured considerably by 18, with more robust slot handling, subscriber state tracking, and failover behavior. On the application side, native UUIDV7 support and the new B-tree Skip Scan optimization — which lets the planner use a multi-column index even when the leading column is absent from the `WHERE` clause, particularly effective on low-cardinality leading columns — are the kind of improvements that benefit query performance without requiring any schema changes.
+PostgreSQL 18 was already released with 18.1 available as a minor version. The case for going directly to 18 was compelling:
 
-The one concern with 18 is its asynchronous I/O subsystem. Async I/O is a brand-new code path, and at our scale we were not willing to bet a production upgrade on an I/O method with no production mileage yet. Fortunately PostgreSQL 18 provides an explicit escape hatch: setting `io_method = 'sync'` reverts the instance to the traditional synchronous I/O path used by every prior version:
+- **Statistics preservation.** `pg_upgrade` in PG18 preserves `pg_statistic` during the upgrade, eliminating the planner's cold-start period where query plans regress until `ANALYZE` catches up. This reduces post-upgrade risk and shortens the observation window after cutover.
+- **Mature logical replication.** Slot handling, subscriber state tracking, and failover behavior are all more robust by PG18. Combined with the built-in `synchronized_standby_slots` from PG17, the `pg_failover_slots` extension dependency is gone entirely.
+- **UUIDV7 support.** Native UUIDV7 generation is available without extensions. For applications that rely on time-ordered UUIDs this removes a common extension dependency.
+- **B-tree Skip Scan.** The planner can now use a multi-column index even when the leading column is absent from the `WHERE` clause. Particularly effective on low-cardinality leading columns, and requires no schema changes to benefit from.
 
-```
-# postgresql.conf
-io_method = 'sync'
-```
+The one concern with PG18 is its asynchronous I/O subsystem. Async I/O is a brand-new code path, and at our scale we were not willing to bet a production upgrade on an I/O method with no production mileage yet. PostgreSQL 18 provides an explicit escape hatch: setting `io_method = 'sync'` in `postgresql.conf` reverts the instance to the traditional synchronous I/O path used by every prior version. With that set from day one, the async I/O risk disappears entirely while all other PG18 improvements remain.
 
-With async I/O neutralized, the remaining PG18 improvements are all upside and carry no additional risk over upgrading to 17. We decided to go directly to PostgreSQL 18 with `io_method = 'sync'` set from day one, and revisit async I/O once it has accumulated more production mileage across the community.
+We decided to go directly to PostgreSQL 18 with `io_method = 'sync'` and plan to revisit async I/O once it has accumulated more production mileage across the community.
 
 ---
 
