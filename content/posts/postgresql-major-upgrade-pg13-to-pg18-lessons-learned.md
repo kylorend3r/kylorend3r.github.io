@@ -216,7 +216,7 @@ We decided to go directly to PostgreSQL 18 with `io_method = 'sync'` and plan to
 
 We encoded all of the above into an Ansible playbook that manages the full upgrade from a single control node. The playbook runs against `localhost` and delegates all database and file operations to remote hosts via `delegate_to`. It is organized into seven sequential phases, each controlled by Ansible tags so individual phases can be re-run in isolation:
 
-![WAL Insert Lock Benchmark)](/images/posts/postgresql-major-upgrade-pg13-to-pg18-lessons-learned/pg_upgrade_phases_diagram.svg)
+![PostgreSQL Upgrade Playbook — 7 Phases](/images/posts/postgresql-major-upgrade-pg13-to-pg18-lessons-learned/upgrade-phases.png)
 
 **Setup** always runs and sets all facts: source/target versions, data directories, binary paths, host lists.
 
