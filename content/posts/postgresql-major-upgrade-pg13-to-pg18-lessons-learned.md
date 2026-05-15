@@ -1,5 +1,5 @@
 +++
-title = 'PostgreSQL Major Upgrade: From PG13 to PG18 — Design, Real Risks, and the Bugs We Found Along the Way'
+title = 'What It Actually Takes to Upgrade PostgreSQL in Production Without Breaking Everything'
 date = '2026-05-14'
 draft = false
 description = 'A practical guide to planning and executing a PostgreSQL major version upgrade at scale: why we upgraded, how we designed the playbook, why the process was still dangerous, and two real bugs we discovered, reported to the community, and solved.'
