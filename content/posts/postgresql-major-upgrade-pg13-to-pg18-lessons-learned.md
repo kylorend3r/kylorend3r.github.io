@@ -262,26 +262,42 @@ The preflight phase ends with a human-readable summary and an explicit operator 
 
 ### Logical Replication: Two Scenarios
 
-The logical replication handling required the most careful design because there are two completely different scenarios depending on the role of the instance being upgraded.
+The logical replication handling required the most careful design because there are two completely different scenarios depending on the role of the instance being upgraded. The playbook handles both, but the sequence and the SQL differ in a way that matters.
 
-**Scenario A — This instance is a publisher.** Other PostgreSQL instances subscribe to this cluster. Their slots (`pg_replication_slots`) are lost by `pg_upgrade`. Before upgrade, the playbook connects to each subscriber and runs:
+**Scenario A — This instance is a publisher.** Other PostgreSQL instances subscribe to this cluster. Their replication slots (`pg_replication_slots`) do not survive `pg_upgrade`. The playbook handles this across three phases:
+
+During **preflight**, the playbook discovers all downstream subscribers by querying `pg_replication_slots` and `pg_stat_replication`, collects each subscriber's IP, subscription name, slot name, and database, and verifies SSH connectivity to each subscriber host. It also pre-generates the slot recreation SQL and saves it to `/tmp/logical_slot.sql` on the primary — before any upgrade step runs.
+
+During the **upgrade phase**, the playbook connects to each subscriber directly and disables its subscription:
 
 ```sql
 ALTER SUBSCRIPTION your_subscription DISABLE;
 ALTER SUBSCRIPTION your_subscription SET (slot_name = NONE);
 ```
 
-After upgrade, the playbook recreates all logical slots from a pre-generated SQL file, then re-attaches and re-enables each subscription. Because the subscriber was not upgraded, its `pg_subscription_rel` (per-table sync state) is intact and no `REFRESH PUBLICATION` is needed.
+It then asserts that each subscription is confirmed disabled (`subenabled = f`) and slot detached (`subslotname = NULL`) before proceeding with `pg_upgrade`.
 
-**Scenario B — This instance is a subscriber.** The subscription definitions survive in `pg_subscription`, but `pg_subscription_rel` (which tracks per-table replication state) is not preserved by `pg_upgrade`. After upgrade the subscriber does not know which tables to replicate. The fix is to re-enable the subscription and run:
+During **post-upgrade**, the playbook recreates the logical slots by executing `/tmp/logical_slot.sql` on the upgraded primary, then re-attaches and re-enables each subscription on the subscriber:
 
 ```sql
+ALTER SUBSCRIPTION your_subscription SET (slot_name = 'your_slot');
+ALTER SUBSCRIPTION your_subscription ENABLE;
+ALTER SUBSCRIPTION your_subscription REFRESH PUBLICATION;
+```
+
+Note that `REFRESH PUBLICATION` is called here — without `copy_data = false` — as a safety step to pick up any table membership changes that occurred while the subscription was disabled. Because the subscriber itself was not upgraded, `pg_subscription_rel` is intact and no data is re-copied. Finally, the playbook queries `pg_replication_slots` on the primary and asserts that no logical slots remain inactive, confirming every subscriber has reconnected successfully.
+
+**Scenario B — This instance is a subscriber.** The subscription definitions survive in `pg_subscription`, but `pg_subscription_rel` (which tracks per-table replication state) is not preserved by `pg_upgrade`. After upgrade the subscriber has no record of which tables to replicate. The playbook disables all own subscriptions before the upgrade identically to Scenario A, then after upgrade re-enables them with:
+
+```sql
+ALTER SUBSCRIPTION your_subscription SET (slot_name = 'your_slot');
+ALTER SUBSCRIPTION your_subscription ENABLE;
 ALTER SUBSCRIPTION your_subscription REFRESH PUBLICATION WITH (copy_data = false);
 ```
 
-This repopulates `pg_subscription_rel` without re-copying data.
+The `copy_data = false` flag is critical here. Without it, PostgreSQL treats the refresh as an initial sync and re-copies the full table data from the publisher. With it, `pg_subscription_rel` is repopulated using the existing replication origin state, and replication resumes from where it left off.
 
-The critical difference: only the subscriber-upgraded scenario needs `REFRESH PUBLICATION`. Getting this wrong in either direction causes either a silent replication stall or an accidental full table copy.
+The critical difference between the two scenarios is not whether `REFRESH PUBLICATION` runs — it runs in both — but whether `copy_data = false` is included. Getting this wrong in the subscriber direction triggers an accidental full table copy. Getting it wrong in the publisher direction (adding `copy_data = false` when `pg_subscription_rel` is already gone) causes a silent replication stall.
 
 ---
 
