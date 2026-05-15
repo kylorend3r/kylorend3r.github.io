@@ -34,7 +34,6 @@ author = 'kylorend3r'
   - [The Fix: Clean Up Orphan OIDs Before Upgrading](#the-fix-clean-up-orphan-oids-before-upgrading)
 - [Post-Upgrade Metrics and Validation](#post-upgrade-metrics-and-validation)
   - [Log Prerequisites](#log-prerequisites)
-  - [Running the Analysis](#running-the-analysis)
   - [Error and Fatal Rate](#error-and-fatal-rate)
   - [Slow Query Volume](#slow-query-volume)
   - [Cancelled Queries](#cancelled-queries)
@@ -545,48 +544,31 @@ We added this check as a mandatory preflight step in the playbook, tightened to 
 
 ## Post-Upgrade Metrics and Validation
 
-Completing the upgrade is not the finish line — it is the start of the measurement window. To make the comparison systematic, we wrote a log analysis script that does a single pass through all PostgreSQL CSV log files, splits every event at the upgrade date boundary, and produces a before/after report across six metric categories. You supply the upgrade date and a slow query threshold; the script handles the rest.
-
-```bash
-./post-anal.sh /var/lib/pgsql/18/data/log
-# Prompts: upgrade date (YYYY-MM-DD) and slow query threshold (ms)
-```
+Completing the upgrade is not the finish line — it is the start of the measurement window. The areas below are the key signals to track after cutover to confirm the upgrade delivered what you expected and to catch any regressions early.
 
 ### Log Prerequisites
 
-The script reads `postgresql-*.csv` files produced by PostgreSQL's CSV logger. Before the upgrade, ensure these settings are active so the pre-upgrade baseline is captured in the same format:
+Before the upgrade, ensure these settings are active so baseline data is captured in the logs for comparison:
 
 ```
 log_destination         = 'csvlog'
 logging_collector       = on
 log_checkpoints         = on
-log_autovacuum_min_duration = 250ms   # low enough to capture most runs
-log_min_duration_statement  = 1000    # match your monitoring threshold
+log_autovacuum_min_duration = 250ms
+log_min_duration_statement  = 1000
 ```
 
-Without `log_checkpoints` and `log_autovacuum_min_duration` set before the upgrade, the before-side of the checkpoint and autovacuum comparisons will be empty.
-
-### Running the Analysis
-
-After the upgrade has been running for a representative period (at least one full business day of equivalent load), run:
-
-```bash
-./post-anal.sh /var/lib/pgsql/18/data/log
-Enter upgrade date (YYYY-MM-DD): 2026-04-10
-Enter log_min_duration_statement threshold in ms [e.g. 1000]: 1000
-```
-
-The script reads all log files in one pass, splits events before and after the upgrade date, computes counts, averages, and percentage deltas, and prints a structured report.
+Without `log_checkpoints` and `log_autovacuum_min_duration` set before the upgrade, there is no pre-upgrade baseline to compare against.
 
 ### Error and Fatal Rate
 
-The first section of the report shows `ERROR`, `FATAL`, and `PANIC` counts before and after with a percentage change. This is the first health check: the total error rate should not increase after the upgrade. A spike here — especially new `FATAL` lines — indicates something wrong with the cluster configuration or extension compatibility that needs investigation before anything else.
+The first thing to check is the `ERROR`, `FATAL`, and `PANIC` rate. The total error count should not increase after the upgrade. A spike — especially new `FATAL` lines — indicates something wrong with cluster configuration or extension compatibility and needs investigation before anything else.
 
-Constraint-level errors (duplicate key violations, constraint violations, replication conflicts) are broken out separately so they can be distinguished from infrastructure errors. These should be stable across the upgrade since they are application-driven.
+Constraint-level errors (duplicate key violations, constraint violations, replication conflicts) should be stable across the upgrade since they are application-driven, not infrastructure-driven.
 
 ### Slow Query Volume
 
-The script counts every `LOG: duration: N ms` line where `N` exceeds the threshold you entered. After the upgrade, with faster autovacuum and reduced I/O contention during maintenance, the count of queries crossing that threshold should drop. A significant reduction here is the most direct confirmation that the performance improvements translated into real workload gains on your cluster.
+After the upgrade, with faster autovacuum and reduced I/O contention, the count of slow queries logged by `log_min_duration_statement` should drop. A significant reduction here is the most direct confirmation that the performance improvements translated into real workload gains on your cluster.
 
 ### Cancelled Queries
 
@@ -596,11 +578,11 @@ Lock timeout counts should remain stable. An increase there is worth investigati
 
 ### Checkpoint Duration
 
-The report shows average `write`, `sync`, and `total` checkpoint times before and after. Checkpoint improvements in PG18 come primarily from better I/O scheduling and the async I/O path (which we disabled with `io_method = sync`, so this category should show modest improvement at best). What to watch for: the `sync` time. A large sync time before the upgrade suggests I/O pressure during checkpoints that the new version may alleviate through better `maintenance_io_concurrency` handling even without async I/O.
+Track average `write`, `sync`, and `total` checkpoint times from `log_checkpoints` output before and after. Checkpoint improvements in PG18 come primarily from better I/O scheduling and the async I/O path (which we disabled with `io_method = sync`, so this category should show modest improvement at best). What to watch for: the `sync` time. A large sync time before the upgrade suggests I/O pressure during checkpoints that the new version may alleviate through better `maintenance_io_concurrency` handling even without async I/O.
 
 ### Autovacuum Duration
 
-This is the most expected win. The report shows autovacuum run count, average duration per run, and total time spent in autovacuum before and after. On our clusters the average duration per run dropped by over 70%, and the total accumulated autovacuum time across the observation window dropped by a similar margin. Fewer and shorter autovacuum runs mean less I/O competition with application queries — which feeds back into the slow query and timeout counts above.
+This is the most expected win. Compare autovacuum run count, average duration per run, and total time spent in autovacuum before and after using `log_autovacuum_min_duration` output. On our clusters the average duration per run dropped by over 70%, and the total accumulated autovacuum time across the observation window dropped by a similar margin. Fewer and shorter autovacuum runs mean less I/O competition with application queries — which feeds back into the slow query and timeout counts above.
 
 ---
 
