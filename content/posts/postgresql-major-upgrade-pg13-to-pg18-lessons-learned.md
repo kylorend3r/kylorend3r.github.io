@@ -232,6 +232,61 @@ We encoded all of the above into an Ansible playbook that manages the full upgra
 
 **Post Upgrade** verifies replica connectivity, recreates logical replication slots, re-enables subscriptions, restores login on write roles, runs `vacuumdb`, updates extensions, and updates Barman configuration.
 
+### Reducing Upgrade Duration
+
+Downtime is the main constraint on a production upgrade. Two optimizations in the playbook made a measurable difference.
+
+**Parallel pg_upgrade with `--jobs`.** `pg_upgrade` can parallelize the schema dump and restore pass across multiple worker processes. On clusters with a single database this matters less, but some of our clusters have 6–7 databases — without parallelism, each database is processed sequentially. Setting `--jobs=4` keeps all four workers busy across databases and cuts the pg_upgrade runtime significantly. Both the dry-run (`--check`) and the live upgrade use the same flag:
+
+```yaml
+- name: "[primary] Execute pg_upgrade on primary"
+  ansible.builtin.command:
+    cmd: >
+      {{ target_pg_bin_dir }}/pg_upgrade
+      --old-datadir={{ source_pg_data_dir }}
+      --new-datadir={{ target_pg_data_dir }}
+      --old-bindir={{ source_pg_bin_dir }}
+      --new-bindir={{ target_pg_bin_dir }}
+      --link
+      --jobs=4
+  delegate_to: "{{ primary_instance }}"
+  become_user: postgres
+  register: pg_upgrade_result
+  timeout: "{{ pg_upgrade_timeout }}"
+```
+
+**Async rsync to all secondaries simultaneously.** Without async execution, rsync would run against each secondary in sequence — downtime would grow linearly with replica count. The playbook fires all rsync jobs in parallel using Ansible's `async` / `poll: 0` pattern, then waits for all of them together. The effective rsync duration becomes that of the slowest secondary rather than the sum of all of them:
+
+```yaml
+- name: "[primary] Rsync data directories from primary to secondary instances"
+  ansible.builtin.shell:
+    cmd: >-
+      rsync --archive --delete --hard-links --size-only
+      --no-inc-recursive --exclude='log' --exclude='pg_wal_old'
+      -e "ssh -i /tmp/pg_rsync_temp_key -o StrictHostKeyChecking=no"
+      {{ source_pg_rsync_dir }} {{ target_pg_rsync_dir }}
+      root@{{ item }}:/var/lib/pgsql
+  delegate_to: "{{ primary_instance }}"
+  loop: "{{ secondary_instances }}"
+  register: rsync_results
+  async: "{{ rsync_timeout }}"
+  poll: 0
+```
+
+**Post-rsync file count validation.** After all rsync jobs finish, the playbook counts files under `base/` on the primary and each secondary and asserts the numbers match. A mismatch means a partial transfer — starting PostgreSQL on top of it would produce a corrupt replica. The assertion hard-fails the playbook before any instance is started:
+
+```yaml
+- name: "[ansible] Fail if base directory file count on secondary does not match primary"
+  ansible.builtin.assert:
+    that:
+      - item.stdout | trim == primary_base_file_count.stdout | trim
+    fail_msg: >-
+      File count mismatch: primary has {{ primary_base_file_count.stdout | trim }} files
+      but {{ item.item }} has {{ item.stdout | trim }} files in {{ target_pg_data_dir }}/base
+  loop: "{{ secondary_base_file_counts.results }}"
+  when: secondary_instances | length > 0
+```
+
 ---
 
 ## Preflight: The Most Important Phase
