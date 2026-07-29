@@ -664,3 +664,5 @@ A PostgreSQL major version upgrade is manageable if you do the right preparation
 Upgrading PostgreSQL across a major version boundary is never just a package swap. The gains from PG13 to PG18 — faster autovacuum, better WAL scalability, async I/O — are real and measurable, but so are the failure modes. The two bugs we hit were not edge cases in theory; they were invisible until the upgrade ran. Finding them cost us time, but filing the bug report and watching the patch land in PG18.2 made it worthwhile.
 
 The checklist above is everything we wish we had before we started. Run it on a clone first, fix what it surfaces, then run the real upgrade with confidence.
+
+This post covers the playbook and the catalog-level bugs. It does not cover what happens inside a subscriber's replication origin during the upgrade window — that failure mode is subtle enough to deserve its own post: [Upgrading a PostgreSQL Subscriber: Why pg_upgrade Can Silently Replay WAL You Already Applied](/posts/upgrading-postgresql-logical-replication-subscribers-with-pg-upgrade/).

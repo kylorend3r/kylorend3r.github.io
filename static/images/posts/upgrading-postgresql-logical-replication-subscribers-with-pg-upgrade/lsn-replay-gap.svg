@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 660" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs>
+    <pattern id="hatch" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+      <rect width="10" height="10" fill="#fdecea"/>
+      <line x1="0" y1="0" x2="0" y2="10" stroke="#e53e3e" stroke-width="2.5"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4a5568"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1100" height="660" fill="#ffffff"/>
+
+  <text x="550" y="34" text-anchor="middle" font-size="20" font-weight="700" fill="#1a202c">
+    The LSN Gap That Gets Replayed After pg_upgrade
+  </text>
+
+  <!-- ===================== PANEL 1: BEFORE ===================== -->
+  <text x="60" y="76" font-size="15" font-weight="700" fill="#2d3748">
+    Before the upgrade — steady state
+  </text>
+  <text x="60" y="96" font-size="12.5" fill="#718096">
+    Slot and origin are close together; publisher and subscriber agree on progress.
+  </text>
+
+  <!-- baseline -->
+  <line x1="110" y1="190" x2="1000" y2="190" stroke="#2b6cb0" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="110" y="215" font-size="12" fill="#2b6cb0">older WAL</text>
+  <text x="1000" y="215" font-size="12" fill="#2b6cb0" text-anchor="end">now</text>
+  <text x="555" y="245" text-anchor="middle" font-size="12.5" fill="#4a5568" font-style="italic">Publisher WAL timeline</text>
+
+  <!-- confirmed_flush_lsn marker -->
+  <line x1="760" y1="170" x2="760" y2="210" stroke="#718096" stroke-width="2.5"/>
+  <circle cx="760" cy="190" r="5" fill="#718096"/>
+  <text x="760" y="150" text-anchor="middle" font-size="12" fill="#4a5568">slot confirmed_flush_lsn</text>
+  <text x="760" y="135" text-anchor="middle" font-size="12" font-family="monospace" fill="#4a5568">0/3A2000</text>
+
+  <!-- origin remote_lsn marker -->
+  <line x1="805" y1="160" x2="805" y2="210" stroke="#2f855a" stroke-width="2.5"/>
+  <circle cx="805" cy="190" r="5" fill="#2f855a"/>
+  <text x="805" y="112" text-anchor="middle" font-size="12" fill="#276749">origin remote_lsn</text>
+  <text x="805" y="127" text-anchor="middle" font-size="12" fill="#276749">(subscriber applied up to)</text>
+  <text x="805" y="142" text-anchor="middle" font-size="12" font-family="monospace" fill="#276749">0/3A4B5C0</text>
+
+  <!-- subscriber state box -->
+  <rect x="700" y="255" width="220" height="42" rx="6" fill="#f0fff4" stroke="#2f855a" stroke-width="1.5"/>
+  <text x="810" y="273" text-anchor="middle" font-size="12" fill="#276749">Subscriber origin state</text>
+  <text x="810" y="289" text-anchor="middle" font-size="12" font-family="monospace" fill="#276749">remote_lsn = 0/3A4B5C0</text>
+
+  <!-- ===================== divider ===================== -->
+  <line x1="40" y1="330" x2="1060" y2="330" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- ===================== PANEL 2: AFTER ===================== -->
+  <text x="60" y="368" font-size="15" font-weight="700" fill="#2d3748">
+    After pg_upgrade — subscription re-enabled
+  </text>
+  <text x="60" y="388" font-size="12.5" fill="#718096">
+    Origin resets to 0/0. The slot never moved. The publisher replays from the slot, not the origin.
+  </text>
+
+  <!-- baseline -->
+  <line x1="110" y1="490" x2="1000" y2="490" stroke="#2b6cb0" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="110" y="515" font-size="12" fill="#2b6cb0">older WAL</text>
+  <text x="1000" y="515" font-size="12" fill="#2b6cb0" text-anchor="end">now (post-upgrade)</text>
+
+  <!-- replay gap shaded band -->
+  <rect x="760" y="470" width="45" height="40" fill="url(#hatch)" stroke="#e53e3e" stroke-width="1.5"/>
+  <line x1="782" y1="440" x2="782" y2="470" stroke="#e53e3e" stroke-width="2" stroke-dasharray="3,3"/>
+  <text x="782" y="425" text-anchor="middle" font-size="12.5" font-weight="700" fill="#c53030">REPLAYED WAL</text>
+  <text x="782" y="440" text-anchor="middle" font-size="11.5" fill="#c53030">(duplicate-key violations)</text>
+
+  <!-- confirmed_flush_lsn marker (frozen) -->
+  <line x1="760" y1="470" x2="760" y2="512" stroke="#718096" stroke-width="2.5"/>
+  <circle cx="760" cy="490" r="5" fill="#718096"/>
+  <text x="700" y="545" text-anchor="middle" font-size="12" fill="#4a5568">confirmed_flush_lsn</text>
+  <text x="700" y="560" text-anchor="middle" font-size="11.5" fill="#4a5568">(slot — unchanged)</text>
+  <text x="700" y="575" text-anchor="middle" font-size="12" font-family="monospace" fill="#4a5568">0/3A2000</text>
+
+  <!-- previously-applied marker (now forgotten) -->
+  <line x1="805" y1="470" x2="805" y2="512" stroke="#c53030" stroke-width="2.5" stroke-dasharray="4,3"/>
+  <circle cx="805" cy="490" r="5" fill="#ffffff" stroke="#c53030" stroke-width="2.5"/>
+  <text x="880" y="545" text-anchor="middle" font-size="12" fill="#c53030">previously applied to here</text>
+  <text x="880" y="560" text-anchor="middle" font-size="11.5" fill="#c53030">(now forgotten by subscriber)</text>
+  <text x="880" y="575" text-anchor="middle" font-size="12" font-family="monospace" fill="#c53030">0/3A4B5C0</text>
+
+  <!-- subscriber state box -->
+  <rect x="150" y="440" width="230" height="52" rx="6" fill="#fff5f5" stroke="#c53030" stroke-width="1.5"/>
+  <text x="265" y="460" text-anchor="middle" font-size="12" fill="#9b2c2c">Subscriber origin state</text>
+  <text x="265" y="476" text-anchor="middle" font-size="12" font-family="monospace" fill="#9b2c2c">remote_lsn = 0/0</text>
+  <text x="265" y="491" text-anchor="middle" font-size="11" fill="#9b2c2c">(reset by pg_upgrade)</text>
+
+  <!-- resume request arrow -->
+  <path d="M 380 460 C 480 430, 600 430, 745 480" fill="none" stroke="#9b2c2c" stroke-width="1.75" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="560" y="422" text-anchor="middle" font-size="12" fill="#9b2c2c">resume request: 0/0</text>
+
+  <!-- publisher decision label -->
+  <rect x="640" y="590" width="360" height="46" rx="6" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="1.5"/>
+  <text x="820" y="610" text-anchor="middle" font-size="12" fill="#2c5282">Publisher streams from:</text>
+  <text x="820" y="627" text-anchor="middle" font-size="12" font-family="monospace" fill="#2c5282">MAX(requested_lsn, confirmed_flush_lsn)</text>
+</svg>
