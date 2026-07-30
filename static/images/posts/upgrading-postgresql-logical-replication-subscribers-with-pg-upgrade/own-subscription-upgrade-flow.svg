@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 970" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4a5568"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9c4221"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="970" fill="#ffffff"/>
+
+  <text x="500" y="34" text-anchor="middle" font-size="19" font-weight="700" fill="#1a202c">
+    Upgrading a Cluster That Is Itself a Subscriber ("own subscription")
+  </text>
+  <text x="500" y="55" text-anchor="middle" font-size="12.5" fill="#718096">
+    Automated flow across preflight → upgrade → pg_upgrade → post_upgrade
+  </text>
+
+  <!-- ================= PANEL 1: PREFLIGHT ================= -->
+  <rect x="120" y="76" width="760" height="112" rx="8" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="1.5"/>
+  <text x="140" y="100" font-size="14" font-weight="700" fill="#2c5282">1. Preflight — health check (informational only)</text>
+  <text x="150" y="122" font-size="12" fill="#2c5282">• Own subscription enabled? apply worker active?</text>
+  <text x="150" y="141" font-size="12" fill="#2c5282">• Sample replication origin remote_lsn twice, a few seconds apart, to confirm it is advancing</text>
+  <text x="150" y="160" font-size="12" fill="#2c5282">• Never fails preflight — displayed in the summary only</text>
+  <text x="150" y="179" font-size="11.5" font-family="monospace" fill="#2c5282">own_subscription_list built from pg_subscription + pg_stat_subscription</text>
+
+  <line x1="500" y1="188" x2="500" y2="214" stroke="#4a5568" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ================= PANEL 2: UPGRADE PHASE — DISABLE ================= -->
+  <rect x="90" y="216" width="820" height="196" rx="8" fill="#fffaf0" stroke="#c05621" stroke-width="1.5"/>
+  <text x="110" y="240" font-size="14" font-weight="700" fill="#9c4221">2. Upgrade phase — disable own subscription (primary is a subscriber)</text>
+
+  <text x="122" y="264" font-size="12" fill="#9c4221">①</text>
+  <text x="140" y="264" font-size="12" font-family="monospace" fill="#9c4221">ALTER SUBSCRIPTION &lt;name&gt; DISABLE;</text>
+  <text x="500" y="264" font-size="11.5" fill="#9c4221">— per database</text>
+
+  <text x="122" y="288" font-size="12" fill="#9c4221">②</text>
+  <text x="140" y="288" font-size="12" fill="#9c4221">Poll pg_stat_subscription until the apply worker actually stops</text>
+  <text x="140" y="305" font-size="11.5" fill="#9c4221">(default 18 × 5s = 90s budget — proceeds either way, non-blocking)</text>
+
+  <text x="122" y="330" font-size="12" fill="#9c4221">③</text>
+  <text x="140" y="330" font-size="12" fill="#9c4221">Capture the origin's progress: pg_replication_origin_status.remote_lsn</text>
+
+  <rect x="140" y="340" width="480" height="24" rx="5" fill="#fff5eb" stroke="#c05621" stroke-width="1.25"/>
+  <text x="150" y="357" font-size="11.5" font-family="monospace" fill="#9c4221">→ persisted to /tmp/own_subscription_origin_lsn.json</text>
+
+  <text x="122" y="382" font-size="12" fill="#9c4221">④</text>
+  <text x="140" y="382" font-size="12" font-family="monospace" fill="#9c4221">ALTER SUBSCRIPTION &lt;name&gt; SET (slot_name = NONE);</text>
+  <text x="670" y="382" font-size="11.5" fill="#9c4221">— detach slot</text>
+
+  <text x="122" y="403" font-size="12" fill="#9c4221">⑤</text>
+  <text x="140" y="403" font-size="11.5" fill="#9c4221">Verify each subscription shows disabled (diagnostic query — logged, does not fail the play)</text>
+
+  <line x1="500" y1="412" x2="500" y2="438" stroke="#4a5568" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ================= MIDDLE: pg_upgrade itself ================= -->
+  <rect x="230" y="440" width="540" height="70" rx="8" fill="#f7fafc" stroke="#4a5568" stroke-width="1.5"/>
+  <text x="500" y="463" text-anchor="middle" font-size="13" font-weight="700" fill="#2d3748">Stop PostgreSQL {{ source_version }} → pg_upgrade --link → start PostgreSQL {{ target_version }}</text>
+  <text x="500" y="483" text-anchor="middle" font-size="11.5" fill="#4a5568">New data directory from initdb has no memory of the origin or the old subscription state.</text>
+  <text x="500" y="499" text-anchor="middle" font-size="11.5" fill="#4a5568">Only the JSON file captured in step ③ survives this boundary.</text>
+
+  <!-- bridge arrow: json file carried across pg_upgrade -->
+  <path d="M 800 352 C 900 400, 900 470, 860 475" fill="none" stroke="#c05621" stroke-width="1.75" stroke-dasharray="5,4"/>
+  <path d="M 860 590 C 900 560, 900 500, 860 480" fill="none" stroke="#c05621" stroke-width="1.75" stroke-dasharray="5,4" marker-end="url(#arrow-amber)"/>
+  <text x="925" y="470" transform="rotate(90 925 470)" text-anchor="middle" font-size="11" fill="#9c4221">carried across pg_upgrade</text>
+
+  <line x1="500" y1="510" x2="500" y2="536" stroke="#4a5568" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ================= PANEL 3: POST_UPGRADE — RE-ENABLE ================= -->
+  <rect x="90" y="538" width="820" height="270" rx="8" fill="#f0fff4" stroke="#2f855a" stroke-width="1.5"/>
+  <text x="110" y="562" font-size="14" font-weight="700" fill="#276749">3. post_upgrade — re-enable own subscription (fixed order — REFRESH is rejected while disabled)</text>
+
+  <rect x="120" y="576" width="760" height="48" rx="6" fill="#e6fffa" stroke="#2f855a" stroke-width="1.25"/>
+  <text x="132" y="594" font-size="12" fill="#276749">1</text>
+  <text x="150" y="594" font-size="12" font-family="monospace" fill="#276749">ALTER SUBSCRIPTION &lt;name&gt; SET (slot_name = '&lt;slot&gt;');</text>
+  <text x="650" y="594" font-size="11.5" fill="#276749">— re-attach slot</text>
+  <text x="150" y="613" font-size="11.5" fill="#276749">Works while still disabled — this only touches catalog metadata, not the apply worker.</text>
+
+  <rect x="120" y="630" width="760" height="56" rx="6" fill="#e6fffa" stroke="#2f855a" stroke-width="1.25"/>
+  <text x="132" y="648" font-size="12" fill="#276749">2</text>
+  <text x="150" y="648" font-size="12" font-family="monospace" fill="#276749">SELECT pg_replication_origin_advance(origin, resume_lsn);</text>
+  <text x="150" y="667" font-size="11.5" fill="#276749">Loads resume_lsn from /tmp/own_subscription_origin_lsn.json (or memory).</text>
+  <text x="150" y="682" font-size="11.5" fill="#c05621">No captured LSN → [WARN] logged, subscription enabled without origin restore.</text>
+
+  <rect x="120" y="692" width="760" height="40" rx="6" fill="#e6fffa" stroke="#2f855a" stroke-width="1.25"/>
+  <text x="132" y="712" font-size="12" fill="#276749">3</text>
+  <text x="150" y="712" font-size="12" font-family="monospace" fill="#276749">ALTER SUBSCRIPTION &lt;name&gt; ENABLE;</text>
+  <text x="500" y="712" font-size="11.5" fill="#276749">— apply worker starts at the restored origin position, not at 0/0</text>
+
+  <rect x="120" y="734" width="760" height="56" rx="6" fill="#e6fffa" stroke="#2f855a" stroke-width="1.25"/>
+  <text x="132" y="752" font-size="12" fill="#276749">4</text>
+  <text x="150" y="752" font-size="12" font-family="monospace" fill="#276749">ALTER SUBSCRIPTION &lt;name&gt; REFRESH PUBLICATION WITH (copy_data = false);</text>
+  <text x="150" y="771" font-size="11.5" fill="#276749">Repopulates pg_subscription_rel without a full table resync — only valid now that step 3 has enabled it.</text>
+
+  <line x1="500" y1="808" x2="500" y2="834" stroke="#4a5568" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ================= FOOTER: verification ================= -->
+  <rect x="230" y="836" width="540" height="60" rx="8" fill="#f7fafc" stroke="#4a5568" stroke-width="1.5"/>
+  <text x="500" y="860" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2d3748">Check pg_subscription.subenabled locally</text>
+  <text x="500" y="879" text-anchor="middle" font-size="11.5" fill="#4a5568">Reported in the completion notice — non-blocking, so a failed re-enable is visible, not silent.</text>
+
+  <text x="500" y="925" text-anchor="middle" font-size="12" fill="#718096" font-style="italic">
+    skip_subscription_enablement=true skips step 3 entirely — steps 1–2 still run so state is ready for a manual enable.
+  </text>
+</svg>

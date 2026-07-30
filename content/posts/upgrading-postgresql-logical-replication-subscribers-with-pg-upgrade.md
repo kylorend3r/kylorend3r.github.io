@@ -97,6 +97,10 @@ The important detail is that this gate is on **both sides**: the mechanism only 
 
 If your subscriber is on a version before 17, treat the subscription state as something you must manually preserve, not something `pg_upgrade` will carry for you.
 
+![Diagram of the automated own-subscription upgrade flow: preflight health check, disabling the subscription and capturing its origin LSN to a JSON file in the upgrade phase, the pg_upgrade boundary the file survives, and the fixed re-enable order — reattach slot, restore origin, enable, refresh publication — in post_upgrade](/images/posts/upgrading-postgresql-logical-replication-subscribers-with-pg-upgrade/own-subscription-upgrade-flow.svg)
+
+*The four steps below are exactly what this diagram shows end to end: disable and capture the origin's position before the upgrade, carry that value across the `pg_upgrade` boundary as the one thing that doesn't get regenerated, then re-attach, restore, enable, and refresh in that fixed order afterward.*
+
 ### Step 1: Document and Disable Subscriptions Before the Upgrade
 
 Before touching anything, capture what exists so you have a record to rebuild from, then disable and detach the subscription's slot association:
