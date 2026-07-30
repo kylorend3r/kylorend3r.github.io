@@ -7,18 +7,12 @@ tags = ['postgresql', 'upgrade', 'pg_upgrade', 'logical-replication', 'replicati
 author = 'kylorend3r'
 +++
 
-Upgrading a PostgreSQL cluster that is also a logical replication subscriber — an instance streaming data from another cluster via `CREATE SUBSCRIPTION` — is one of the less-documented ways `pg_upgrade` can hurt you. The schema comes over fine. The data comes over fine. The subscription comes back showing `enabled = true`. And then, intermittently, the apply worker throws duplicate-key violations on rows that were already replicated long before the upgrade started.
-
-Nothing about the data was wrong. The subscriber just re-applied WAL it had already applied once. This post explains exactly why that happens, what changed in PostgreSQL 17 to fix part of it, and the manual procedure to protect a subscriber on any version before that.
-
-This is the second post in a series on production PostgreSQL upgrades. The first post, [What It Actually Takes to Upgrade PostgreSQL in Production Without Breaking Everything](/posts/postgresql-major-upgrade-pg13-to-pg18-lessons-learned/), covered our PG13 → PG18 playbook end-to-end and two catalog-level bugs we hit along the way: a `NOT NULL` constraint name collision in `pg_restore`, and orphaned role OIDs in `pg_init_privs` after a role was dropped. That post touched logical replication only at the playbook level — disabling and re-enabling subscriptions around the upgrade window. It didn't cover what actually happens *inside* a subscriber's replication origin during that window, which is a big enough failure mode to deserve its own post. That's what this one is about.
-
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
-- [The Symptom: Duplicate-Key Violations After a Clean Upgrade](#the-symptom-duplicate-key-violations-after-a-clean-upgrade)
-- [Background: How PostgreSQL Tracks Replication Progress](#background-how-postgresql-tracks-replication-progress)
-- [What pg\_upgrade Actually Does — and Doesn't](#what-pg_upgrade-actually-does--and-doesnt)
+- [The Post-Upgrade Problem](#the-post-upgrade-problem)
+- [PostgreSQL Replication Process Tracking for Subscriptions (Beneath the Surface)](#postgresql-replication-process-tracking-for-subscriptions-beneath-the-surface)
+- [The Role and Responsibility of pg\_upgrade](#the-role-and-responsibility-of-pg_upgrade)
 - [Why the Publisher Replays WAL the Subscriber Already Applied](#why-the-publisher-replays-wal-the-subscriber-already-applied)
 - [What Changed in PostgreSQL 17](#what-changed-in-postgresql-17)
 - [The Safe Procedure for Pre-PG17 Subscribers](#the-safe-procedure-for-pre-pg17-subscribers)
@@ -33,7 +27,13 @@ This is the second post in a series on production PostgreSQL upgrades. The first
 
 ---
 
-## The Symptom: Duplicate-Key Violations After a Clean Upgrade
+Upgrading a PostgreSQL cluster that is also a logical replication subscriber — an instance streaming data from another cluster via `CREATE SUBSCRIPTION` — is one of the less-documented ways `pg_upgrade` can hurt you. The schema comes over fine. The data comes over fine. The subscription comes back showing `enabled = true`. And then, intermittently, the apply worker throws duplicate-key violations on rows that were already replicated long before the upgrade started.
+
+Nothing about the data was wrong. The subscriber just re-applied WAL it had already applied once. This post explains exactly why that happens, what changed in PostgreSQL 17 to fix part of it, and the manual procedure to protect a subscriber on any version before that.
+
+This is the second post in a series on production PostgreSQL upgrades. The first post, [What It Actually Takes to Upgrade PostgreSQL in Production Without Breaking Everything](/posts/postgresql-major-upgrade-pg13-to-pg18-lessons-learned/), covered our PG13 → PG18 playbook end-to-end and two catalog-level bugs we hit along the way: a `NOT NULL` constraint name collision in `pg_restore`, and orphaned role OIDs in `pg_init_privs` after a role was dropped. That post touched logical replication only at the playbook level — disabling and re-enabling subscriptions around the upgrade window. It didn't cover what actually happens *inside* a subscriber's replication origin during that window, which is a big enough failure mode to deserve its own post. That's what this one is about.
+
+## The Post-Upgrade Problem
 
 The scenario looks like this: you run `pg_upgrade` on a PostgreSQL subscriber — say PG13 → PG18. The upgrade itself completes without error. `pg_subscription` shows the subscription with the right connection info and publication list. You re-enable it, the apply worker connects, replication resumes.
 
@@ -47,7 +47,7 @@ CONTEXT:  processing remote data for replication origin "pg_16512" during messag
 
 The row already existed. It was already replicated, correctly, before the upgrade window even started. The apply worker is not corrupting data — it is re-applying a slice of WAL it had already applied once, because it has no memory of ever having applied it.
 
-## Background: How PostgreSQL Tracks Replication Progress
+## PostgreSQL Replication Process Tracking for Subscriptions (Beneath the Surface)
 
 Every logical replication subscription is backed by a **replication origin** — an object that tracks how far replay has progressed for that specific subscription against that specific publisher. The PostgreSQL 18 documentation describes it directly:
 
@@ -58,7 +58,7 @@ That progress marker is the origin's `remote_lsn` — the publisher-side LSN up 
 
 The key phrase there is *that same data directory*. The origin's durability guarantee was designed for restarts, crashes, and failovers within one running cluster — not for being physically relocated into a brand-new one.
 
-## What pg_upgrade Actually Does — and Doesn't
+## The Role and Responsibility of pg_upgrade
 
 `pg_upgrade`'s job, at a mechanical level, is: dump the schema with `pg_dump --binary-upgrade`, restore it into a freshly `initdb`'d cluster, then physically link or copy the user table data files across. Two consequences fall directly out of that design:
 
@@ -241,38 +241,16 @@ The failure mode here is deceptive precisely because everything *looks* successf
 
 The root cause is not a bug so much as a structural gap: before PostgreSQL 17, nobody had written the logic to re-derive and re-emit replication origin state as SQL during a binary-upgrade dump. `pg_upgrade` physically relocates data files, but a replication origin's progress marker was never designed to be meaningful outside the data directory that checkpointed it. If your subscriber is on any version before 17, treat that origin LSN as something only you can carry across — document it, disable cleanly, and restore it explicitly once the new cluster is up.
 
+If you are planning a logical replication upgrade of your own, a few things are worth deciding before you touch either cluster:
+
+- **Check both endpoints' versions first.** If subscriber and publisher are both already on PostgreSQL 17 or later, `pg_upgrade` carries origin state across natively and the manual procedure in this post is unnecessary. The moment either side is below 17, assume nothing survives and plan for the manual steps.
+- **Capture the origin's `resume_lsn` before you disable anything.** It costs one query and it is the single value that separates a clean cutover from a wave of duplicate-key errors afterward. Write it down outside the cluster you're about to upgrade.
+- **Treat the subscriber and publisher upgrades as two separate problems.** A subscriber upgrade risks silently replaying WAL (loud failure: duplicate keys). A publisher upgrade risks silently losing a replication slot (quiet failure: a data gap with no error at all). The fix for one is not the fix for the other — don't assume `copy_data = false` is always correct just because it was correct on the subscriber side.
+- **Never trust `enabled = true` as proof a subscription is healthy after an upgrade.** Confirm `pg_subscription_rel` shows every table in `r` (ready) state and that the origin's LSN matches what you expect, rather than relying on the subscription flag alone.
+- **Rehearse the whole sequence on a staging clone first.** Both failure modes in this post are invisible until well after the upgrade window closes — a staging run with production-sized WAL volume is the only reliable way to see whether the resync window and resume LSN math actually hold up before you do it against production.
+
 ## References
 
 - [PostgreSQL Documentation: Replication Progress Tracking (§53.19)](https://www.postgresql.org/docs/current/replication-origins.html)
 - [PostgreSQL Documentation: Streaming Replication Protocol — START_REPLICATION](https://www.postgresql.org/docs/current/protocol-replication.html)
 - [PostgreSQL Documentation: pg_upgrade](https://www.postgresql.org/docs/current/pgupgrade.html)
-
-
-
-Upgrading a PostgreSQL Cluster with Publications and Logical Replication Slot
-
-
-If a PostgreSQL database contains a logical replication slot(s) it's not going to be exists after the upgrade. In other words, pg_upgrade doesn't preserve the logical replication slot. Therefore, we have to identify them before the upgrade and re-create them after the upgrade if required. 
-
-Before the upgrade identify the slots. 
-
-```
-SELECT slot_name, plugin, database
-FROM pg_replication_slots
-WHERE slot_type = 'logical';
-```
-
-After the upgrade create the required slots. 
-
-```
-SELECT pg_create_logical_replication_slot('your_slot_name', 'pgoutput');
-```
-
-
-
-Key Takeaways for Publications and Logical Replication Slot Before the Upgrade
-
-
-- Publications are preserved after the upgrade. As a result, we don't need to take action on publications. 
-- Replication slots are not preserved. We have to identify them and re-create after the upgrade in a proper manner. 
-- Disable the subscriber side before starting the upgrade and enable it after the upgrade. During the upgrade subscriber needs to be disabled. 
