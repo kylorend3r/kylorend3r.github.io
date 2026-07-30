@@ -32,7 +32,7 @@ Upgrading a PostgreSQL cluster that is also a logical replication subscriber —
 
 Nothing about the data was wrong. The subscriber just re-applied WAL it had already applied once. This post explains exactly why that happens, what changed in PostgreSQL 17 to fix part of it, and the manual procedure to protect a subscriber on any version before that.
 
-This is the second post in a series on production PostgreSQL upgrades. The first post, [What It Actually Takes to Upgrade PostgreSQL in Production Without Breaking Everything](/posts/postgresql-major-upgrade-pg13-to-pg18-lessons-learned/), covered our PG13 → PG18 playbook end-to-end and two catalog-level bugs we hit along the way: a `NOT NULL` constraint name collision in `pg_restore`, and orphaned role OIDs in `pg_init_privs` after a role was dropped. That post touched logical replication only at the playbook level — disabling and re-enabling subscriptions around the upgrade window. It didn't cover what actually happens *inside* a subscriber's replication origin during that window, which is a big enough failure mode to deserve its own post. That's what this one is about.
+This is the second post in a series on production PostgreSQL upgrades. The first post, [What It Actually Takes to Upgrade PostgreSQL in Production Without Breaking Everything](/posts/postgresql-major-upgrade-pg13-to-pg18-lessons-learned/), covered my PG13 → PG18 playbook end-to-end and two catalog-level bugs I hit along the way: a `NOT NULL` constraint name collision in `pg_restore`, and orphaned role OIDs in `pg_init_privs` after a role was dropped. That post touched logical replication only at the playbook level — disabling and re-enabling subscriptions around the upgrade window. It didn't cover what actually happens *inside* a subscriber's replication origin during that window, which is a big enough failure mode to deserve its own post. That's what this one is about.
 
 ## The Post-Upgrade Problem
 
@@ -290,5 +290,6 @@ If you are planning a logical replication upgrade of your own, a few things are 
 ## References
 
 - [PostgreSQL Documentation: Replication Progress Tracking (§53.19)](https://www.postgresql.org/docs/current/replication-origins.html)
+- [PostgreSQL Documentation: pg_replication_origin_status](https://www.postgresql.org/docs/current/view-pg-replication-origin-status.html)
 - [PostgreSQL Documentation: Streaming Replication Protocol — START_REPLICATION](https://www.postgresql.org/docs/current/protocol-replication.html)
 - [PostgreSQL Documentation: pg_upgrade](https://www.postgresql.org/docs/current/pgupgrade.html)
