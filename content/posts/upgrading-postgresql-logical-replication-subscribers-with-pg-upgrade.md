@@ -1,11 +1,12 @@
 +++
-title = 'Upgrading a PostgreSQL Subscriber: Why pg_upgrade Can Silently Replay WAL You Already Applied'
+title = 'Upgrading a PostgreSQL Subscriber to Avoid Replaying WAL You Already Applied'
 date = '2026-07-29'
 draft = false
-description = 'Why running pg_upgrade on a logical replication subscriber before PostgreSQL 17 can lose the replication origin bookmark entirely, causing duplicate-key violations after the upgrade — plus what happens to publications and replication slots when the publisher itself is upgraded.'
 tags = ['postgresql', 'upgrade', 'pg_upgrade', 'logical-replication', 'replication', 'database', 'subscription', 'publication']
 author = 'kylorend3r'
 +++
+
+**Summary:** Running `pg_upgrade` on a logical replication subscriber that's older than PostgreSQL 17 silently drops the subscription's replication origin — the bookmark tracking how far it has replayed. The publisher never finds out, so it replays WAL the subscriber already applied, surfacing as duplicate-key errors after an otherwise clean upgrade. This post covers why that happens, what PostgreSQL 17 changed to fix it, a manual procedure to protect subscribers on older versions, and the separate considerations for upgrading the publisher side, where publications survive the upgrade but replication slots never do.
 
 ## Table of Contents
 
@@ -54,7 +55,40 @@ Every logical replication subscription is backed by a **replication origin** —
 > "The `pg_replication_origin_status` view contains information about how far replay for a certain origin has progressed."
 > — PostgreSQL 18 docs, §53.19
 
-That progress marker is the origin's `remote_lsn` — the publisher-side LSN up to which this subscriber has confirmed applying changes. While the server is running, this value lives in shared memory. It gets checkpointed to disk at `pg_logical/replorigin_checkpoint` by `CheckPointReplicationOrigin()` in `src/backend/replication/logical/origin.c`, so it survives a restart of that same data directory. At startup, PostgreSQL reads that file back into shared memory.
+![Replication origin tracking how far a subscription has replayed against its publisher](/images/posts/upgrading-postgresql-logical-replication-subscribers-with-pg-upgrade/replication_origin.png)
+
+That progress marker is the origin's `remote_lsn` — the publisher-side LSN up to which this subscriber has confirmed applying changes. While the server is running, this value lives in shared memory, in an array PostgreSQL calls `replication_states`. The `pg_replication_origin_status` view queried above is just a thin wrapper around that array — every row it returns is read live from shared memory, never from disk.
+
+That's precisely why `pg_logical/replorigin_checkpoint` has to exist at all: shared memory doesn't survive a restart on its own. `CheckPointReplicationOrigin()`, in `src/backend/replication/logical/origin.c`, dumps the `replication_states` array to that file during every regular checkpoint, purely so the value has somewhere durable to live between checkpoints and a crash or restart. At startup, PostgreSQL reads the file back and repopulates `replication_states` — only then does `pg_replication_origin_status` have anything to report again. The file is the origin's durability mechanism; the view is a window onto memory that the file exists to refill.
+
+`CheckPointReplicationOrigin()` is defined in `origin.c`, but it doesn't run on its own — it's called from `xlog.c`, from a function named `CheckPointGuts()`. That name is literal: `CheckPointGuts()` is the actual body of I/O work a regular checkpoint performs, one subsystem at a time. It has no logic of its own beyond calling each subsystem's own checkpoint routine in sequence:
+
+```c
+static void
+CheckPointGuts(XLogRecPtr checkPointRedo, int flags)
+{
+	CheckPointRelationMap();
+	CheckPointReplicationOrigin();
+
+	/* Write out all dirty data in SLRUs and the main buffer pool */
+	TRACE_POSTGRESQL_BUFFER_CHECKPOINT_START(flags);
+	CheckpointStats.ckpt_write_t = GetCurrentTimestamp();
+	CheckPointCLOG();
+	CheckPointCommitTs();
+	CheckPointSUBTRANS();
+	CheckPointMultiXact();
+	CheckPointPredicate();
+	CheckPointBuffers(flags);
+
+	/* Perform all queued up fsyncs */
+	TRACE_POSTGRESQL_BUFFER_CHECKPOINT_SYNC_START();
+	CheckpointStats.ckpt_sync_t = GetCurrentTimestamp();
+	ProcessSyncRequests();
+	CheckpointStats.ckpt_sync_end_t = GetCurrentTimestamp();
+	TRACE_POSTGRESQL_BUFFER_CHECKPOINT_DONE();
+```
+
+`CheckPointReplicationOrigin()` sits right alongside `CheckPointCLOG()`, `CheckPointCommitTs()`, and `CheckPointBuffers()` — the same calls responsible for flushing the commit log, commit timestamps, and dirty buffer pool pages to disk. The replication origin isn't special-cased or handled by some separate subscription-aware mechanism; it's checkpointed the same way, in the same pass, as every other piece of durable server state. That's the whole reason `pg_logical/replorigin_checkpoint` behaves like any other checkpoint artifact: it's written on the same cadence, by the same code path, as the rest of the cluster's crash-recovery state.
 
 The key phrase there is *that same data directory*. The origin's durability guarantee was designed for restarts, crashes, and failovers within one running cluster — not for being physically relocated into a brand-new one.
 
